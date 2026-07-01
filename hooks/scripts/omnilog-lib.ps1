@@ -35,7 +35,7 @@ function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
   $detail = (ConvertTo-Ascii $detail) -replace '\s+', ' '
   $detail = $detail.Trim()
   $tag = ConvertTo-Ascii $tag
-  $ts = Get-Date -Format 'yy-MM-dd HHmm'
+  $ts = Get-Date -Format 'yy-MM-dd HH:mm'
   $budget = $max - "[$ts] ".Length - " <$tag>".Length
   if ($budget -lt 5 -or -not $detail) {
     $line = "[$ts] <$tag>"
