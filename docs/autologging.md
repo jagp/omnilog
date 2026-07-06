@@ -14,24 +14,24 @@ Legend: **[VERIFIED]** = confirmed by inspecting a real transcript on this machi
 Every hook is invoked with a JSON object on **stdin**. All events include these
 common fields **[DOCS]**:
 
-| Field | Meaning |
-|-------|---------|
-| `session_id` | Unique session identifier |
+| Field             | Meaning                                          |
+| ----------------- | ------------------------------------------------ |
+| `session_id`      | Unique session identifier                        |
 | `transcript_path` | Absolute path to the conversation JSONL (see §2) |
-| `cwd` | Working directory when the hook fired |
-| `hook_event_name` | The event that triggered the hook |
+| `cwd`             | Working directory when the hook fired            |
+| `hook_event_name` | The event that triggered the hook                |
 
 Event-specific fields:
 
-| Event | Extra fields | Matcher filters on | Notes |
-|-------|-------------|--------------------|-------|
-| `PreToolUse`  | `tool_name`, `tool_input` | tool name (e.g. `Edit\|Write`) | Can block a tool call |
-| `PostToolUse` | `tool_name`, `tool_input`, `tool_response` | tool name | Fires after each tool call |
-| `UserPromptSubmit` | `prompt` | — | stdout **is** injected into context |
-| `SessionStart` | `source` (`startup`\|`resume`\|`clear`\|`compact`) | `source` | stdout **is** injected into context |
-| `SessionEnd` | `reason` | reason *(claim, unverified)* | |
-| `Stop` | `stop_hook_active` (bool) | — (always fires) | Once per assistant response |
-| `SubagentStop` | `stop_hook_active` (+ `agent_id`/`agent_type` **[UNVERIFIED]**) | — | Once per subagent finish |
+| Event              | Extra fields                                                    | Matcher filters on             | Notes                               |
+| ------------------ | --------------------------------------------------------------- | ------------------------------ | ----------------------------------- |
+| `PreToolUse`       | `tool_name`, `tool_input`                                       | tool name (e.g. `Edit\|Write`) | Can block a tool call               |
+| `PostToolUse`      | `tool_name`, `tool_input`, `tool_response`                      | tool name                      | Fires after each tool call          |
+| `UserPromptSubmit` | `prompt`                                                        | —                              | stdout **is** injected into context |
+| `SessionStart`     | `source` (`startup`\|`resume`\|`clear`\|`compact`)              | `source`                       | stdout **is** injected into context |
+| `SessionEnd`       | `reason`                                                        | reason _(claim, unverified)_   |                                     |
+| `Stop`             | `stop_hook_active` (bool)                                       | — (always fires)               | Once per assistant response         |
+| `SubagentStop`     | `stop_hook_active` (+ `agent_id`/`agent_type` **[UNVERIFIED]**) | —                              | Once per subagent finish            |
 
 `stop_hook_active` is a loop guard: it is `true` when the Stop hook already forced a
 continuation. Only relevant if the hook **blocks** (exit 2). A pure logging hook that
@@ -39,7 +39,7 @@ always exits 0 cannot loop, so it can ignore this field. **[DOCS]**
 
 ---
 
-## 2. Transcript structure and token cost  **[VERIFIED]**
+## 2. Transcript structure and token cost **[VERIFIED]**
 
 `transcript_path` points to a JSONL file — **one line per content block**, not per
 message. An assistant reply that thinks, writes text, then calls two tools produces
@@ -92,20 +92,20 @@ interrupted turn — seen in the sample). When no assistant usage can be compute
 the token-cost field entirely** (write `<actionType>`, never `:0` or a placeholder) and
 still exit 0 — never divide-by-zero or crash.
 
-### Cross-transcript verification  **[CROSS-VERIFIED across 10 projects]**
+### Cross-transcript verification **[CROSS-VERIFIED across 10 projects]**
 
-| Aspect | Result |
-|--------|--------|
-| CLI versions sampled | 2.1.118, 2.1.138, 2.1.183, 2.1.186, 2.1.187, 2.1.191 |
-| Models sampled | sonnet-4-6, haiku-4-5, opus-4-8, `<synthetic>` |
-| `usage` key set | identical across all versions above |
-| `usage` path | `.message.usage` (nested), consistent |
-| Multi-line-per-`requestId` | confirmed wherever a turn had >1 assistant message |
-| Fixtures | stored under `evals/fixtures/*.jsonl` (raw) + `evals/readable/*.md` (digest) |
+| Aspect                     | Result                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| CLI versions sampled       | 2.1.118, 2.1.138, 2.1.183, 2.1.186, 2.1.187, 2.1.191                         |
+| Models sampled             | sonnet-4-6, haiku-4-5, opus-4-8, `<synthetic>`                               |
+| `usage` key set            | identical across all versions above                                          |
+| `usage` path               | `.message.usage` (nested), consistent                                        |
+| Multi-line-per-`requestId` | confirmed wherever a turn had >1 assistant message                           |
+| Fixtures                   | stored under `evals/fixtures/*.jsonl` (raw) + `evals/readable/*.md` (digest) |
 
-### Stability caveat  **[DOCS]**
+### Stability caveat **[DOCS]**
 
-Official docs state the transcript format is *internal and may change between versions*.
+Official docs state the transcript format is _internal and may change between versions_.
 The sample above is stable, but **all of it is CLI 2.1.x** — no pre-2.1 data was
 available, so stability is only established within that band. A logging hook should
 fail soft — on any parse failure or schema mismatch, **omit the token-cost field
@@ -113,16 +113,14 @@ entirely** (never a placeholder value) rather than crash — and should not hard
 
 ---
 
-## 3. `settings.json` registration  **[DOCS]**
+## 3. `settings.json` registration **[DOCS]**
 
 ```json
 {
   "hooks": {
     "Stop": [
       {
-        "hooks": [
-          { "type": "command", "command": "<shell command>" }
-        ]
+        "hooks": [{ "type": "command", "command": "<shell command>" }]
       }
     ]
   }
@@ -138,7 +136,7 @@ entirely** (never a placeholder value) rather than crash — and should not hard
 
 ---
 
-## 4. Windows / PowerShell execution  **[DOCS + LOCAL]**
+## 4. Windows / PowerShell execution **[DOCS + LOCAL]**
 
 - On Windows, command hooks run through **Git Bash** (`sh -c "<command>"`) by default.
 - To run PowerShell, invoke it explicitly in the command string:
@@ -157,13 +155,13 @@ entirely** (never a placeholder value) rather than crash — and should not hard
 
 ---
 
-## 5. Exit codes  **[DOCS]**
+## 5. Exit codes **[DOCS]**
 
-| Exit | Effect |
-|------|--------|
-| `0` | Success. For `Stop`, stdout is **not** injected into context. |
-| `2` | Block. For `Stop`, forces Claude to continue (feeds stderr back). **Never use for a logger.** |
-| other | Non-blocking error; first stderr line shown in transcript as a hook error. |
+| Exit  | Effect                                                                                        |
+| ----- | --------------------------------------------------------------------------------------------- |
+| `0`   | Success. For `Stop`, stdout is **not** injected into context.                                 |
+| `2`   | Block. For `Stop`, forces Claude to continue (feeds stderr back). **Never use for a logger.** |
+| other | Non-blocking error; first stderr line shown in transcript as a hook error.                    |
 
 A logging hook should **always exit 0** and write to the file directly.
 
@@ -171,7 +169,7 @@ A logging hook should **always exit 0** and write to the file directly.
 
 ## 6. Implications for the `omnilog` component
 
-- **Append-only, immutable log:** the hook only ever *appends*; existing lines are never
+- **Append-only, immutable log:** the hook only ever _appends_; existing lines are never
   rewritten or backfilled — even entries with known-bad values (the model's early
   fabricated `<init:2500>`) remain as an immutable record. Corrections are made by
   appending a new line, never editing an old one.
@@ -201,11 +199,11 @@ plus direct inspection of `~/.claude/projects/…/19a69f52-*.jsonl` on this mach
 
 Three hooks in `.claude/hooks/`, registered in `.claude/settings.json`:
 
-| Event | Script | Line format |
-|-------|--------|-------------|
-| `PostToolUse` (all tools) | `omnilog-tool.ps1` | `[ts] <description> <ToolName>` — shell/agent → `tool_input.description` (the summary I wrote, secret-safe); file tools → filename; `Grep`/`Glob` → pattern; Agent → `Spun off new subagent (#id) for <purpose>`. Whole line capped to 78 chars + ellipsis; no `:cost`. |
-| `Stop` | `omnilog-stop.ps1` | `[ts] response - N tool call(s) <Stop:tokens>` - tokens = summed output_tokens for the turn, omitted if unmeasurable |
-| `SubagentStop` | `omnilog-subagentstop.ps1` | `[ts] subagent <id> (<type>) finished <SubagentStop>` |
+| Event                     | Script                     | Line format                                                                                                                                                                                                                                                             |
+| ------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PostToolUse` (all tools) | `omnilog-tool.ps1`         | `[ts] <description> <ToolName>` — shell/agent → `tool_input.description` (the summary I wrote, secret-safe); file tools → filename; `Grep`/`Glob` → pattern; Agent → `Spun off new subagent (#id) for <purpose>`. Whole line capped to 78 chars + ellipsis; no `:cost`. |
+| `Stop`                    | `omnilog-stop.ps1`         | `[ts] response - N tool call(s) <Stop:tokens>` - tokens = summed output_tokens for the turn, omitted if unmeasurable                                                                                                                                                    |
+| `SubagentStop`            | `omnilog-subagentstop.ps1` | `[ts] subagent <id> (<type>) finished <SubagentStop>`                                                                                                                                                                                                                   |
 
 All scripts read the hook JSON from stdin, append one line, and `exit 0` (never block).
 They honor `$env:OMNILOG_FILE` (test override), else `$CLAUDE_PROJECT_DIR/omnilog.md`.
@@ -213,9 +211,9 @@ They honor `$env:OMNILOG_FILE` (test override), else `$CLAUDE_PROJECT_DIR/omnilo
 Verified offline against `evals/fixtures/` before activation: real turn -> summed cost;
 empty-turn and synthetic-only turns -> no cost field; agent spawn -> id reference captured.
 
-**Secrets (resolved):** the log stores model-authored *descriptions*, not raw material. Shell/agent
+**Secrets (resolved):** the log stores model-authored _descriptions_, not raw material. Shell/agent
 tools log `tool_input.description` (e.g. `Rotate GitHub auth token <Bash>`) — never the
-command string; file tools log only the filename, never content. So secret *values* never
+command string; file tools log only the filename, never content. So secret _values_ never
 reach the log, and `omnilog.md` is safe to track. (Belt-and-suspenders: the repo's
 trufflehog / git-diff-check still scan on commit.)
 
