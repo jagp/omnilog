@@ -24,13 +24,52 @@ function ConvertTo-Ascii([string]$s) {
   return ($s -replace '[^\x20-\x7E]', '?')   # keep printable ASCII only; anything else -> '?'
 }
 
-function Resolve-OmnilogPath {
-  if ($env:OMNILOG_FILE) { return $env:OMNILOG_FILE }
-  if ($env:CLAUDE_PROJECT_DIR) { return (Join-Path $env:CLAUDE_PROJECT_DIR 'omnilog.md') }
-  return (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'omnilog.md')
+function Get-OmnilogConfig {
+  # Reads .claude/omnilog.local.md frontmatter from the project dir.
+  # Returns @{ scope = 'per-project'|'global'|'off'; path = <string|$null> }.
+  $scope = 'per-project'; $path = $null
+  if ($env:CLAUDE_PROJECT_DIR) {
+    $cfg = Join-Path $env:CLAUDE_PROJECT_DIR '.claude\omnilog.local.md'
+    if (Test-Path -LiteralPath $cfg) {
+      foreach ($ln in (Get-Content -LiteralPath $cfg)) {
+        if ($ln -match '^\s*scope:\s*(\S+)') { $scope = $Matches[1].Trim('"').ToLower() }
+        elseif ($ln -match '^\s*path:\s*(.+?)\s*$') { $path = $Matches[1].Trim().Trim('"') }
+      }
+    }
+  }
+  return @{ scope = $scope; path = $path }
+}
+
+function Resolve-OmnilogTarget {
+  # The log path, or $null meaning "do not log".
+  if ($env:OMNILOG_FILE) { return $env:OMNILOG_FILE }   # highest-priority override (tests + power users)
+  $cfg = Get-OmnilogConfig
+  switch ($cfg.scope) {
+    'off' { return $null }
+    'global' {
+      if ($cfg.path) { return $cfg.path }
+      $base = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR }
+              elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE '.claude' }
+              else { $HOME }
+      return (Join-Path $base 'omnilog.md')
+    }
+    default {
+      # 'per-project' (and any unrecognized value): log only if the project opted in
+      # by having an omnilog.md marker.
+      if ($env:CLAUDE_PROJECT_DIR) {
+        $marker = Join-Path $env:CLAUDE_PROJECT_DIR 'omnilog.md'
+        if (Test-Path -LiteralPath $marker) { return $marker }
+        return $null
+      }
+      # Dev fallback (no CLAUDE_PROJECT_DIR): repo root two levels up from this lib.
+      return (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'omnilog.md')
+    }
+  }
 }
 
 function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
+  $target = Resolve-OmnilogTarget
+  if (-not $target) { return }   # scope=off, or per-project with no opt-in marker
   # Sanitize BEFORE measuring so the width budget is computed on the final ASCII text.
   $detail = (ConvertTo-Ascii $detail) -replace '\s+', ' '
   $detail = $detail.Trim()
@@ -46,5 +85,5 @@ function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
   else {
     $line = "[$ts] $detail <$tag>"
   }
-  Add-Content -LiteralPath (Resolve-OmnilogPath) -Encoding ASCII -Value $line
+  Add-Content -LiteralPath $target -Encoding ASCII -Value $line
 }
