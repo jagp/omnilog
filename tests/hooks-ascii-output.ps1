@@ -2,7 +2,7 @@
 # Also guards the 78-char width. Exit 0 = pass, 1 = fail.
 $ErrorActionPreference = 'Stop'
 $root  = Split-Path $PSScriptRoot -Parent
-$hooks = Join-Path $root '.claude\hooks'
+$hooks = Join-Path $root 'hooks\scripts'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8   # deliver UTF-8 to child stdin
 
 $U = 'em' + [char]0x2014 + 'dash ' + [char]0x201C + 'q' + [char]0x201D + ' caf' + [char]0xE9 +

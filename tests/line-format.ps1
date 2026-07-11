@@ -3,7 +3,7 @@
 # Exit 0 = pass, 1 = fail.
 $ErrorActionPreference = 'Stop'
 $root  = Split-Path $PSScriptRoot -Parent
-$hooks = Join-Path $root '.claude\hooks'
+$hooks = Join-Path $root 'hooks\scripts'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $log = Join-Path $env:TEMP ("omni-fmt-{0}.md" -f ([guid]::NewGuid().ToString('N')))
