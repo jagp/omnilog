@@ -13,7 +13,7 @@ Today dev-strap is where those pieces are being built and hardened locally. The 
 | **Version control** | `git` + **git-flow** (`main` / `develop` + feature/release/hotfix flows) | ✅ set up |
 | **Autologging** | Every action Claude takes is appended to `omnilog.md` automatically, via Claude Code hooks | ✅ built + tested |
 | **Linting** | [Trunk](https://trunk.io) meta-linter: `prettier`, `markdownlint`, `checkov`, `trufflehog`, `git-diff-check` | ✅ configured |
-| **Testing** | Atomic PowerShell test suite, run from the ground up | ✅ 5 tests, all green |
+| **Testing** | Atomic PowerShell test suite, run from the ground up | ✅ 6 tests, all green |
 
 ---
 
@@ -68,6 +68,7 @@ powershell -File tests/run-all.ps1
 | `line-format.ps1` | every line matches `[yy-MM-dd HH:mm] … <tag>` |
 | `omnilog-scope.ps1` | scope resolution: per-project opt-in, global, off, env override |
 | `ado.ps1` | ado task-board mirroring stays observe-only and ASCII |
+| `ado-scope.ps1` | board writes only where opted in; `ado:` key on/off/marker gate |
 
 `run-all.ps1` auto-discovers every `tests/*.ps1`, so adding a test needs no wiring.
 
@@ -98,6 +99,10 @@ scope: per-project
 
 `$env:OMNILOG_FILE` overrides all of the above (used by the test suite). Scope changes
 take effect on the next Claude Code session.
+
+The ado task-board mirror follows the same file with its own `ado:` key: it rides the
+per-project opt-in marker by default, `ado: on` forces it on (even under `global` scope,
+which alone never enables it), and `ado: off` disables it independently.
 
 ---
 

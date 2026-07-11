@@ -26,18 +26,20 @@ function ConvertTo-Ascii([string]$s) {
 
 function Get-OmnilogConfig {
   # Reads .claude/omnilog.local.md frontmatter from the project dir.
-  # Returns @{ scope = 'per-project'|'global'|'off'; path = <string|$null> }.
-  $scope = 'per-project'; $path = $null
+  # Returns @{ scope = 'per-project'|'global'|'off'; path = <string|$null>;
+  #            ado = $null|'on'|'off' } ('ado:' is the task board's independent switch).
+  $scope = 'per-project'; $path = $null; $ado = $null
   if ($env:CLAUDE_PROJECT_DIR) {
     $cfg = Join-Path $env:CLAUDE_PROJECT_DIR '.claude\omnilog.local.md'
     if (Test-Path -LiteralPath $cfg) {
       foreach ($ln in (Get-Content -LiteralPath $cfg)) {
         if ($ln -match '^\s*scope:\s*(\S+)') { $scope = $Matches[1].Trim('"').ToLower() }
         elseif ($ln -match '^\s*path:\s*(.+?)\s*$') { $path = $Matches[1].Trim().Trim('"') }
+        elseif ($ln -match '^\s*ado:\s*(\S+)') { $ado = $Matches[1].Trim('"').ToLower() }
       }
     }
   }
-  return @{ scope = $scope; path = $path }
+  return @{ scope = $scope; path = $path; ado = $ado }
 }
 
 function Resolve-OmnilogTarget {

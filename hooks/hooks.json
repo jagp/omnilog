@@ -1,5 +1,5 @@
 {
-  "description": "omnilog action logging: one appended line per tool call, response (with real token cost), and subagent finish.",
+  "description": "omnilog action logging (one appended line per tool call, response with real token cost, subagent finish) + ado live task-board mirror. Both are scope-guarded: they write only in projects that opted in via the omnilog.md marker or .claude/omnilog.local.md.",
   "hooks": {
     "PostToolUse": [
       {
@@ -8,6 +8,10 @@
           {
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/omnilog-tool.ps1\""
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ado-tool.ps1\""
           }
         ]
       }
