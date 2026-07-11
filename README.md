@@ -106,4 +106,4 @@ dev-strap/
 
 ## Roadmap
 
-The near-term goal is packaging dev-strap as a **distributable Claude Code plugin**. Choices that don't matter for a single local project become real forks once hooks install globally — most notably **logging scope** (per-project log vs. one global aggregate), which will become a first-activation choice rather than a baked-in default. These are tracked in [`docs/plugin-conversion-todo.md`](docs/plugin-conversion-todo.md).
+**Endgame:** a distributable Claude Code plugin that stamps this setup into any new repo. The near-term work is packaging dev-strap as that plugin — most notably making **logging scope** (per-project / global / off) a first-activation choice. Detailed phase planning is tracked privately by the maintainer, not in this repo.
