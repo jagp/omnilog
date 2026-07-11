@@ -123,8 +123,7 @@ dev-strap/
 │       ├── ado-lib.ps1            # ado task-board shared helpers
 │       └── ado-tool.ps1           # PostToolUse (task-board mirror)
 ├── docs/
-│   ├── autologging.md             # verified hook-schema reference
-│   └── plugin-conversion-todo.md  # decisions parked for plugin conversion
+│   └── autologging.md             # verified hook-schema reference
 ├── tests/                         # atomic PowerShell tests + run-all.ps1
 ├── evals/
 │   ├── README.md                  # transcript-fixture corpus + schema notes
