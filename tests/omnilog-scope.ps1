@@ -17,8 +17,9 @@ $env:CLAUDE_PROJECT_DIR = $proj
 $cfg = Join-Path $proj '.claude\omnilog.local.md'
 $log = Join-Path $proj 'omnilog.md'
 
-# 1) per-project default, no marker -> $null (project has not opted in)
-Check 'per-project/no-marker => null' ($null -eq (Resolve-OmnilogTarget))
+# 1) per-project default, no marker -> the project log anyway (self-seeding; the
+#    old fail-closed "marker or nothing" gate is gone -- 'enabled' is the switch now)
+Check 'per-project/no-marker => project log' ((Resolve-OmnilogTarget) -eq $log)
 
 # 2) per-project default, marker present -> the project log
 Set-Content -LiteralPath $log -Value '' -Encoding ASCII
@@ -52,6 +53,38 @@ Pop-Location
 Check 'no-project-dir => cwd log' ($rFallback -eq (Join-Path $here 'omnilog.md'))
 Check 'no-project-dir !=> plugin dir' ($rFallback -ne (Join-Path (Split-Path (Split-Path $hooks -Parent) -Parent) 'omnilog.md'))
 Remove-Item -LiteralPath $cwd -Recurse -Force -ErrorAction SilentlyContinue
+
+# --- the explicit on/off switch (item 3) -------------------------------------
+$proj2 = Join-Path $env:TEMP ("omni-sw-{0}" -f ([guid]::NewGuid().ToString('N')))
+New-Item -ItemType Directory -Path (Join-Path $proj2 '.claude') -Force | Out-Null
+$env:CLAUDE_PROJECT_DIR = $proj2
+$cfg2 = Join-Path $proj2 '.claude\omnilog.local.md'
+$log2 = Join-Path $proj2 'omnilog.md'
+
+# 7) config 'enabled: false' disables logging
+Set-Content -LiteralPath $cfg2 -Value "---`nenabled: false`n---" -Encoding ASCII
+Check 'enabled:false => null' ($null -eq (Resolve-OmnilogTarget))
+
+# 8) config 'enabled: true' keeps it on
+Set-Content -LiteralPath $cfg2 -Value "---`nenabled: true`n---" -Encoding ASCII
+Check 'enabled:true => project log' ((Resolve-OmnilogTarget) -eq $log2)
+
+# 9) $env:OMNILOG_ENABLED=off is the master kill switch -- beats OMNILOG_FILE
+#    (mirrors ADO_SCOPE=off beating ADO_FILE)
+Remove-Item -LiteralPath $cfg2 -Force -ErrorAction SilentlyContinue
+$env:OMNILOG_ENABLED = 'off'
+$env:OMNILOG_FILE = 'X:\override.md'
+Check 'OMNILOG_ENABLED=off beats OMNILOG_FILE' ($null -eq (Resolve-OmnilogTarget))
+Remove-Item Env:\OMNILOG_FILE
+Remove-Item Env:\OMNILOG_ENABLED
+
+# 10) self-seeding: writing an entry creates omnilog.md when it does not exist
+Check 'no log file before write' (-not (Test-Path -LiteralPath $log2))
+Write-OmnilogEntry 'seed test' 'test'
+Check 'write seeds omnilog.md' (Test-Path -LiteralPath $log2)
+
+Remove-Item Env:\CLAUDE_PROJECT_DIR -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $proj2 -Recurse -Force -ErrorAction SilentlyContinue
 
 if ($fail -eq 0) { Write-Output 'PASS  omnilog-scope'; exit 0 }
 Write-Output ("FAIL  omnilog-scope ({0} case(s))" -f $fail); exit 1
