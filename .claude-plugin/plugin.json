@@ -1,6 +1,6 @@
 {
   "name": "dev-strap",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Project scaffold for Claude Code + VSCode: git-flow, omnilog action logging, Trunk linting, PowerShell tests.",
   "author": {
     "name": "Jared Parmenter",

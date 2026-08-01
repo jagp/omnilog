@@ -4,6 +4,30 @@ All notable changes to dev-strap are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0]
+
+### Changed
+
+- **Logging is on by default.** The per-project opt-in gate ("log only if an
+  `omnilog.md` marker already exists, otherwise stay silent") is gone. omnilog now
+  seeds a fresh `omnilog.md` in the calling project on first write, so a newly
+  scaffolded repo starts logging itself with no manual setup.
+- Because the ado board rides the same marker, it likewise becomes active in projects
+  that log. Revisit when the activation-semantics design settles.
+
+### Added
+
+- `enabled:` master switch in `.claude/omnilog.local.md` — explicit opt-out
+  (`false`/`off`/`no`/`0`) or opt-in (`true`/`on`/`yes`/`1`), independent of `scope:`.
+- `$env:OMNILOG_ENABLED=off` — machine-wide kill switch; outranks everything,
+  including `$env:OMNILOG_FILE` (mirrors how `ADO_SCOPE=off` beats `ADO_FILE`).
+- `Initialize-OmnilogFile` — best-effort seeding of a fresh empty log; never throws,
+  so a hook can't break a session.
+
+### Marketplace note
+
+`.claude-plugin/marketplace.json` pins `version` per plugin entry; bumped to 0.3.0.
+
 ## [0.2.0]
 
 ### Added

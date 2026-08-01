@@ -24,13 +24,26 @@ function ConvertTo-Ascii([string]$s) {
   return ($s -replace '[^\x20-\x7E]', '?')   # keep printable ASCII only; anything else -> '?'
 }
 
+function ConvertTo-OmnilogBool([string]$v) {
+  # Accepts the usual spellings from config files and env vars.
+  # Returns $true/$false, or $null when the value is unrecognized (treat as unset).
+  if ($null -eq $v) { return $null }
+  switch ($v.Trim().Trim('"').ToLower()) {
+    { $_ -in @('false', 'off', 'no', '0', 'disabled') } { return $false }
+    { $_ -in @('true', 'on', 'yes', '1', 'enabled') } { return $true }
+    default { return $null }
+  }
+}
+
 function Get-OmnilogConfig {
   # Reads .claude/omnilog.local.md frontmatter from the project dir.
   # Returns @{ scope = 'per-project'|'global'|'off'; path = <string|$null>;
-  #            ado = $null|'on'|'off'; adoPath = <string|$null> }
+  #            ado = $null|'on'|'off'; adoPath = <string|$null>;
+  #            enabled = $null|$true|$false }
+  #   'enabled:'  -- explicit master on/off switch ($null = unset = on).
   #   'ado:'      -- the task board's independent on/off switch.
   #   'ado-path:' -- explicit board location override (parity with omnilog 'path:').
-  $scope = 'per-project'; $path = $null; $ado = $null; $adoPath = $null
+  $scope = 'per-project'; $path = $null; $ado = $null; $adoPath = $null; $enabled = $null
   if ($env:CLAUDE_PROJECT_DIR) {
     $cfg = Join-Path $env:CLAUDE_PROJECT_DIR '.claude\omnilog.local.md'
     if (Test-Path -LiteralPath $cfg) {
@@ -39,16 +52,21 @@ function Get-OmnilogConfig {
         elseif ($ln -match '^\s*path:\s*(.+?)\s*$') { $path = $Matches[1].Trim().Trim('"') }
         elseif ($ln -match '^\s*ado-path:\s*(.+?)\s*$') { $adoPath = $Matches[1].Trim().Trim('"') }
         elseif ($ln -match '^\s*ado:\s*(\S+)') { $ado = $Matches[1].Trim('"').ToLower() }
+        elseif ($ln -match '^\s*enabled:\s*(\S+)') { $enabled = (ConvertTo-OmnilogBool $Matches[1]) }
       }
     }
   }
-  return @{ scope = $scope; path = $path; ado = $ado; adoPath = $adoPath }
+  return @{ scope = $scope; path = $path; ado = $ado; adoPath = $adoPath; enabled = $enabled }
 }
 
 function Resolve-OmnilogTarget {
   # The log path, or $null meaning "do not log".
-  if ($env:OMNILOG_FILE) { return $env:OMNILOG_FILE }   # highest-priority override (tests + power users)
+  # Order: OMNILOG_ENABLED=off (master kill switch, beats everything) > OMNILOG_FILE
+  # > config 'enabled: false' > scope.
+  if ((ConvertTo-OmnilogBool $env:OMNILOG_ENABLED) -eq $false) { return $null }
+  if ($env:OMNILOG_FILE) { return $env:OMNILOG_FILE }   # explicit path override (tests + power users)
   $cfg = Get-OmnilogConfig
+  if ($cfg.enabled -eq $false) { return $null }         # explicit opt-out, any scope
   switch ($cfg.scope) {
     'off' { return $null }
     'global' {
@@ -59,12 +77,11 @@ function Resolve-OmnilogTarget {
       return (Join-Path $base 'omnilog.md')
     }
     default {
-      # 'per-project' (and any unrecognized value): log only if the project opted in
-      # by having an omnilog.md marker.
+      # 'per-project' (and any unrecognized value): the calling project's own log.
+      # No marker gate -- the file is seeded on first write (see Write-OmnilogEntry).
+      # Turn logging off with 'enabled: false', 'scope: off', or OMNILOG_ENABLED=off.
       if ($env:CLAUDE_PROJECT_DIR) {
-        $marker = Join-Path $env:CLAUDE_PROJECT_DIR 'omnilog.md'
-        if (Test-Path -LiteralPath $marker) { return $marker }
-        return $null
+        return (Join-Path $env:CLAUDE_PROJECT_DIR 'omnilog.md')
       }
       # Fallback (no CLAUDE_PROJECT_DIR): the runtime working directory, never the
       # plugin's own dir. Anchoring to $PWD keeps an installed plugin logging into
@@ -74,9 +91,26 @@ function Resolve-OmnilogTarget {
   }
 }
 
+function Initialize-OmnilogFile([string]$target) {
+  # Seed a fresh, empty log in the calling project if one does not exist yet.
+  # Best-effort: a hook must never break a session, so failures are swallowed.
+  if (-not $target) { return }
+  try {
+    if (-not (Test-Path -LiteralPath $target)) {
+      $dir = Split-Path -Parent $target
+      if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+      }
+      New-Item -ItemType File -Force -Path $target | Out-Null
+    }
+  }
+  catch { }
+}
+
 function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
   $target = Resolve-OmnilogTarget
-  if (-not $target) { return }   # scope=off, or per-project with no opt-in marker
+  if (-not $target) { return }   # logging disabled (enabled:false / scope:off / env kill switch)
+  Initialize-OmnilogFile $target
   # Sanitize BEFORE measuring so the width budget is computed on the final ASCII text.
   $detail = (ConvertTo-Ascii $detail) -replace '\s+', ' '
   $detail = $detail.Trim()
