@@ -76,9 +76,39 @@ powershell -File tests/run-all.ps1
 
 ## Install as a plugin
 
-dev-strap is being packaged as a Claude Code plugin. During the experimental phase,
-enable it via the skills/plugins directory auto-load (no marketplace step), then choose
-a logging scope in each project.
+dev-strap is a Claude Code plugin distributed from its own repo, which doubles as a
+single-plugin marketplace (`.claude-plugin/marketplace.json`). Install it, then choose a
+logging scope in each project.
+
+```install
+/plugin marketplace add jagp/dev-strap
+/plugin install dev-strap@dev-strap
+```
+
+For local/experimental use before pulling from GitHub, add the marketplace from a path:
+`/plugin marketplace add ./path/to/dev-strap`.
+
+### Autoload (enable on every session)
+
+To load dev-strap automatically with no manual install step, register the marketplace and
+enable the plugin in `~/.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "dev-strap": { "source": { "source": "github", "repo": "jagp/dev-strap" } }
+  },
+  "enabledPlugins": {
+    "dev-strap@dev-strap": true
+  }
+}
+```
+
+Plugin hooks fire in every project, but omnilog and the ado board only write where you
+opt in (see Logging scope below), so global autoload is safe. **One exception — the
+dev-strap repo itself** already dogfoods these hooks via its project
+`.claude/settings.json`; don't also autoload the plugin there, or both copies fire
+(double logging).
 
 ### Logging scope
 
@@ -131,6 +161,7 @@ dev-strap/
 ├── CLAUDE.md                      # instructions Claude Code loads each session
 ├── omnilog.md                     # the action log (append-only ledger)
 ├── .claude-plugin/
+│   ├── marketplace.json           # single-plugin marketplace (source: "./")
 │   └── plugin.json                # plugin manifest (name, version, metadata)
 ├── .claude/
 │   └── settings.json              # dev-strap's own (dogfooding) hook registrations

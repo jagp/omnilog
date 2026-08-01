@@ -13,6 +13,9 @@ All notable changes to dev-strap are recorded here. Format follows
   task-board viewer, not just the mirror hook.
 - `ado-path:` key in `.claude/omnilog.local.md` pins the board to an explicit
   location (parity with omnilog's `path:`), e.g. a shared file under your home dir.
+- `.claude-plugin/marketplace.json` — the repo now doubles as a single-plugin
+  marketplace (`source: "./"`), installable via `/plugin marketplace add jagp/dev-strap`
+  then `/plugin install dev-strap@dev-strap`, or autoloaded via `~/.claude/settings.json`.
 
 ### Fixed
 
