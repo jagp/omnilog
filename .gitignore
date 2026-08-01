@@ -2,3 +2,4 @@ omnilog.md.historic
 # ado task board is git-ignored working state (regenerable, not a tracked artifact)
 *.ado
 .claude/task.ado
+omnilog.md
