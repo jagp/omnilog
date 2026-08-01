@@ -16,6 +16,9 @@ function Read-HookStdin {
 
 function ConvertTo-Ascii([string]$s) {
   if (-not $s) { return '' }
+  # Whitespace controls (newline/tab/...) become spaces FIRST - the catch-all below
+  # would otherwise turn them into '?' before callers can collapse them.
+  $s = $s -replace '\s', ' '
   $s = $s.Replace([string][char]0x2026, '...')
   $s = $s.Replace([string][char]0x2014, '-').Replace([string][char]0x2013, '-')
   $s = $s.Replace([string][char]0x2018, "'").Replace([string][char]0x2019, "'")
@@ -34,7 +37,20 @@ function Get-OmnilogConfig {
   if ($env:CLAUDE_PROJECT_DIR) {
     $cfg = Join-Path $env:CLAUDE_PROJECT_DIR '.claude\omnilog.local.md'
     if (Test-Path -LiteralPath $cfg) {
-      foreach ($ln in (Get-Content -LiteralPath $cfg)) {
+      # Unreadable config (locked/permission) -> defaults; never let config IO throw.
+      $all = @(); try { $all = @(Get-Content -LiteralPath $cfg -ErrorAction Stop) } catch { $all = @() }
+      # Honor keys ONLY inside the YAML frontmatter fence. Prose in the markdown
+      # body (e.g. docs quoting "scope: off") must not flip the config. Files
+      # without an opening '---' keep the lenient whole-file scan.
+      $lines = $all
+      if ($all.Count -gt 0 -and ($all[0] -replace [string][char]0xFEFF, '').Trim() -eq '---') {
+        $close = -1
+        for ($i = 1; $i -lt $all.Count; $i++) { if ($all[$i].Trim() -eq '---') { $close = $i; break } }
+        if ($close -eq 1) { $lines = @() }                            # empty frontmatter
+        elseif ($close -gt 1) { $lines = $all[1..($close - 1)] }
+        # no closing fence: keep the whole-file scan (still just a frontmatter file)
+      }
+      foreach ($ln in $lines) {
         if ($ln -match '^\s*scope:\s*(\S+)') { $scope = $Matches[1].Trim('"').ToLower() }
         elseif ($ln -match '^\s*path:\s*(.+?)\s*$') { $path = $Matches[1].Trim().Trim('"') }
         elseif ($ln -match '^\s*ado-path:\s*(.+?)\s*$') { $adoPath = $Matches[1].Trim().Trim('"') }
@@ -47,7 +63,10 @@ function Get-OmnilogConfig {
 
 function Resolve-OmnilogTarget {
   # The log path, or $null meaning "do not log".
-  if ($env:OMNILOG_FILE) { return $env:OMNILOG_FILE }   # highest-priority override (tests + power users)
+  # Highest-priority override (tests + power users). Trimmed: a whitespace-only
+  # value leaked by a wrapper/other tool must not become a "path" of spaces.
+  $ov = [string]$env:OMNILOG_FILE
+  if ($ov -and $ov.Trim()) { return $ov.Trim() }
   $cfg = Get-OmnilogConfig
   switch ($cfg.scope) {
     'off' { return $null }
@@ -77,6 +96,12 @@ function Resolve-OmnilogTarget {
 function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
   $target = Resolve-OmnilogTarget
   if (-not $target) { return }   # scope=off, or per-project with no opt-in marker
+  # A 'path:'/OMNILOG_FILE aimed into a not-yet-created folder must not silently
+  # drop every line forever - create the parent dir (parity with Write-AdoMirror).
+  $dir = Split-Path $target -Parent
+  if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  }
   # Sanitize BEFORE measuring so the width budget is computed on the final ASCII text.
   $detail = (ConvertTo-Ascii $detail) -replace '\s+', ' '
   $detail = $detail.Trim()
