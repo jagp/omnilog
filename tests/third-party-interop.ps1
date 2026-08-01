@@ -40,11 +40,12 @@ $rc = Fire 'omnilog-tool.ps1' ('{"tool_name":"caf' + [char]0xE9 + [char]0x2014 +
 Check 'unicode tool_name: exit 0'     ($rc -eq 0)
 Check 'unicode tool_name: ascii tag'  (-not ((LastLine) -match '[^\x00-\x7F]'))
 
-# 5) 10k-char description -> clamped to 78, single line
+# 5) 10k-char description -> kept in full (no width cap), still ONE well-formed line
 $big = 'A' * 10000
 $rc = Fire 'omnilog-tool.ps1' ('{"tool_name":"Bash","tool_input":{"description":"' + $big + '"}}')
-Check 'huge description: exit 0'  ($rc -eq 0)
-Check 'huge description: <= 78'   ((LastLine).Length -le 78)
+Check 'huge description: exit 0'    ($rc -eq 0)
+Check 'huge description: in full'   ((LastLine).Contains($big))
+Check 'huge description: formatted' ((LastLine) -match $fmt)
 
 # 6) format-injection: description carrying newlines + a fake omnilog line must
 #    collapse to ONE well-formed line (no forged entries in the ledger)

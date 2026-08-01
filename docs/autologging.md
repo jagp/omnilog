@@ -201,7 +201,7 @@ Three hooks in `.claude/hooks/`, registered in `.claude/settings.json`:
 
 | Event                     | Script                     | Line format                                                                                                                                                                                                                                                             |
 | ------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PostToolUse` (all tools) | `omnilog-tool.ps1`         | `[ts] <description> <ToolName>` — shell/agent → `tool_input.description` (the summary I wrote, secret-safe); file tools → filename; `Grep`/`Glob` → pattern; Agent → `Spun off new subagent (#id) for <purpose>`. Whole line capped to 78 chars + ellipsis; no `:cost`. |
+| `PostToolUse` (all tools) | `omnilog-tool.ps1`         | `[ts] <description> <ToolName>` — shell/agent → `tool_input.description` (the summary I wrote, secret-safe); file tools → filename; `Grep`/`Glob` → pattern; Agent → `Spun off new subagent (#id) for <purpose>`. Logged in full, no width cap; no `:cost`. |
 | `Stop`                    | `omnilog-stop.ps1`         | `[ts] response - N tool call(s) <Stop:tokens>` - tokens = summed output_tokens for the turn, omitted if unmeasurable                                                                                                                                                    |
 | `SubagentStop`            | `omnilog-subagentstop.ps1` | `[ts] subagent <id> (<type>) finished <SubagentStop>`                                                                                                                                                                                                                   |
 
@@ -221,5 +221,5 @@ trufflehog / git-diff-check still scan on commit.)
 
 All three hooks read stdin as UTF-8 and write through `omnilog-lib.ps1`, the single place
 that enforces the log invariants: **ASCII-only** (Unicode transliterated, else stripped to
-`?`) and **<= 78 chars** (whole line, ASCII `...` ellipsis). Verified by atomic tests under
+`?`) and **one line per entry** (whitespace collapsed; never truncated). Verified by atomic tests under
 `tests/` (`ascii-sanitizer.ps1`, `hooks-ascii-output.ps1`); run all with `tests/run-all.ps1`.
