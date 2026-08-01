@@ -27,19 +27,22 @@ function ConvertTo-Ascii([string]$s) {
 function Get-OmnilogConfig {
   # Reads .claude/omnilog.local.md frontmatter from the project dir.
   # Returns @{ scope = 'per-project'|'global'|'off'; path = <string|$null>;
-  #            ado = $null|'on'|'off' } ('ado:' is the task board's independent switch).
-  $scope = 'per-project'; $path = $null; $ado = $null
+  #            ado = $null|'on'|'off'; adoPath = <string|$null> }
+  #   'ado:'      -- the task board's independent on/off switch.
+  #   'ado-path:' -- explicit board location override (parity with omnilog 'path:').
+  $scope = 'per-project'; $path = $null; $ado = $null; $adoPath = $null
   if ($env:CLAUDE_PROJECT_DIR) {
     $cfg = Join-Path $env:CLAUDE_PROJECT_DIR '.claude\omnilog.local.md'
     if (Test-Path -LiteralPath $cfg) {
       foreach ($ln in (Get-Content -LiteralPath $cfg)) {
         if ($ln -match '^\s*scope:\s*(\S+)') { $scope = $Matches[1].Trim('"').ToLower() }
         elseif ($ln -match '^\s*path:\s*(.+?)\s*$') { $path = $Matches[1].Trim().Trim('"') }
+        elseif ($ln -match '^\s*ado-path:\s*(.+?)\s*$') { $adoPath = $Matches[1].Trim().Trim('"') }
         elseif ($ln -match '^\s*ado:\s*(\S+)') { $ado = $Matches[1].Trim('"').ToLower() }
       }
     }
   }
-  return @{ scope = $scope; path = $path; ado = $ado }
+  return @{ scope = $scope; path = $path; ado = $ado; adoPath = $adoPath }
 }
 
 function Resolve-OmnilogTarget {
@@ -63,8 +66,10 @@ function Resolve-OmnilogTarget {
         if (Test-Path -LiteralPath $marker) { return $marker }
         return $null
       }
-      # Dev fallback (no CLAUDE_PROJECT_DIR): repo root two levels up from this lib.
-      return (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'omnilog.md')
+      # Fallback (no CLAUDE_PROJECT_DIR): the runtime working directory, never the
+      # plugin's own dir. Anchoring to $PWD keeps an installed plugin logging into
+      # the calling project rather than the plugin cache.
+      return (Join-Path (Get-Location).Path 'omnilog.md')
     }
   }
 }

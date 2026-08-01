@@ -98,11 +98,14 @@ scope: per-project
 ```
 
 `$env:OMNILOG_FILE` overrides all of the above (used by the test suite). Scope changes
-take effect on the next Claude Code session.
+take effect on the next Claude Code session. Both artifacts always resolve into the
+calling project's directory (or a path you configure) — never into the plugin's own dir.
 
 The ado task-board mirror follows the same file with its own `ado:` key: it rides the
 per-project opt-in marker by default, `ado: on` forces it on (even under `global` scope,
-which alone never enables it), and `ado: off` disables it independently.
+which alone never enables it), and `ado: off` disables it independently. Pin the board to
+an explicit location with `ado-path:` (parity with omnilog's `path:`), e.g.
+`ado-path: C:\Users\<name>\.claude\task.ado`.
 
 ### Task board (`/ado`)
 
@@ -116,8 +119,8 @@ copy and never touches an agent's real list.
 | `/ado` | show the board verbatim (says "empty" until an agent creates a task) |
 | `/ado add "<text>"` | append your own item to a `### user` block, alongside the agents' lists |
 
-Enable/disable it per project with the `ado:` key described above; `$env:ADO_FILE`
-overrides the board path.
+Enable/disable it per project with the `ado:` key described above, or pin its location
+with `ado-path:`. `$env:ADO_FILE` overrides everything; `$env:ADO_SCOPE=off` force-disables.
 
 ---
 
