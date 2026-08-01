@@ -2,7 +2,7 @@
 # This file is itself pure ASCII - the torture string is built from code points at runtime.
 # Exit 0 = pass, 1 = fail.
 $ErrorActionPreference = 'Stop'
-$hooks = Join-Path (Split-Path $PSScriptRoot -Parent) '.claude\hooks'
+$hooks = Join-Path (Split-Path $PSScriptRoot -Parent) 'hooks\scripts'
 . (Join-Path $hooks 'omnilog-lib.ps1')
 
 $U = 'em' + [char]0x2014 + 'dash ' + [char]0x201C + 'smart' + [char]0x201D + ' caf' + [char]0xE9 +

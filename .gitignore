@@ -1,5 +1,13 @@
+omnilog.md
 omnilog.md.historic
+
 # ado task board is git-ignored working state (regenerable, not a tracked artifact)
 *.ado
 .claude/task.ado
-omnilog.md
+
+# maintainer's private working notes (planning lives in dotfiles, not the repo)
+todo.md
+# per-project local plugin settings (e.g. .claude/omnilog.local.md) are never committed
+
+
+

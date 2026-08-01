@@ -13,7 +13,7 @@ Today dev-strap is where those pieces are being built and hardened locally. The 
 | **Version control** | `git` + **git-flow** (`main` / `develop` + feature/release/hotfix flows) | ✅ set up |
 | **Autologging** | Every action Claude takes is appended to `omnilog.md` automatically, via Claude Code hooks | ✅ built + tested |
 | **Linting** | [Trunk](https://trunk.io) meta-linter: `prettier`, `markdownlint`, `checkov`, `trufflehog`, `git-diff-check` | ✅ configured |
-| **Testing** | Atomic PowerShell test suite, run from the ground up | ✅ 3 tests, all green |
+| **Testing** | Atomic PowerShell test suite, run from the ground up | ✅ 6 tests, all green |
 
 ---
 
@@ -66,8 +66,43 @@ powershell -File tests/run-all.ps1
 | `ascii-sanitizer.ps1` | arbitrary Unicode → pure printable ASCII |
 | `hooks-ascii-output.ps1` | hooks never emit a non-ASCII byte; lines stay ≤ 78 |
 | `line-format.ps1` | every line matches `[yy-MM-dd HH:mm] … <tag>` |
+| `omnilog-scope.ps1` | scope resolution: per-project opt-in, global, off, env override |
+| `ado.ps1` | ado task-board mirroring stays observe-only and ASCII |
+| `ado-scope.ps1` | board writes only where opted in; `ado:` key on/off/marker gate |
 
 `run-all.ps1` auto-discovers every `tests/*.ps1`, so adding a test needs no wiring.
+
+---
+
+## Install as a plugin
+
+dev-strap is being packaged as a Claude Code plugin. During the experimental phase,
+enable it via the skills/plugins directory auto-load (no marketplace step), then choose
+a logging scope in each project.
+
+### Logging scope
+
+Plugin hooks fire in every project, so omnilog only writes where you opt in. Configure
+per project with `/omnilog-scope`, or by hand in `.claude/omnilog.local.md` (git-ignored):
+
+| Scope | Behavior | Writes when |
+|-------|----------|-------------|
+| `per-project` (default) | writes `omnilog.md` in the repo root | only if `omnilog.md` exists (the opt-in marker) |
+| `global` | writes one shared log at `path:` (default `~/.claude/omnilog.md`) | always |
+| `off` | omnilog disabled for this project | never |
+
+```yaml
+---
+scope: per-project
+---
+```
+
+`$env:OMNILOG_FILE` overrides all of the above (used by the test suite). Scope changes
+take effect on the next Claude Code session.
+
+The ado task-board mirror follows the same file with its own `ado:` key: it rides the
+per-project opt-in marker by default, `ado: on` forces it on (even under `global` scope,
+which alone never enables it), and `ado: off` disables it independently.
 
 ---
 
@@ -77,16 +112,23 @@ powershell -File tests/run-all.ps1
 dev-strap/
 ├── CLAUDE.md                      # instructions Claude Code loads each session
 ├── omnilog.md                     # the action log (append-only ledger)
+├── .claude-plugin/
+│   └── plugin.json                # plugin manifest (name, version, metadata)
 ├── .claude/
-│   ├── settings.json              # hook registrations
-│   └── hooks/
-│       ├── omnilog-lib.ps1        # shared: UTF-8 stdin, ASCII + 78-width, path
+│   └── settings.json              # dev-strap's own (dogfooding) hook registrations
+├── commands/
+│   └── omnilog-scope.md           # /omnilog-scope logging-scope chooser
+├── hooks/
+│   ├── hooks.json                 # plugin hook registrations (installed copies)
+│   └── scripts/
+│       ├── omnilog-lib.ps1        # shared: UTF-8 stdin, ASCII + 78-width, scope
 │       ├── omnilog-tool.ps1       # PostToolUse
 │       ├── omnilog-stop.ps1       # Stop (real token cost)
-│       └── omnilog-subagentstop.ps1
+│       ├── omnilog-subagentstop.ps1
+│       ├── ado-lib.ps1            # ado task-board shared helpers
+│       └── ado-tool.ps1           # PostToolUse (task-board mirror)
 ├── docs/
-│   ├── autologging.md             # verified hook-schema reference
-│   └── plugin-conversion-todo.md  # decisions parked for plugin conversion
+│   └── autologging.md             # verified hook-schema reference
 ├── tests/                         # atomic PowerShell tests + run-all.ps1
 ├── evals/
 │   ├── README.md                  # transcript-fixture corpus + schema notes
@@ -106,4 +148,4 @@ dev-strap/
 
 ## Roadmap
 
-The near-term goal is packaging dev-strap as a **distributable Claude Code plugin**. Choices that don't matter for a single local project become real forks once hooks install globally — most notably **logging scope** (per-project log vs. one global aggregate), which will become a first-activation choice rather than a baked-in default. These are tracked in [`docs/plugin-conversion-todo.md`](docs/plugin-conversion-todo.md).
+**Endgame:** a distributable Claude Code plugin that stamps this setup into any new repo. The near-term work is packaging dev-strap as that plugin — most notably making **logging scope** (per-project / global / off) a first-activation choice. Detailed phase planning is tracked privately by the maintainer, not in this repo.
