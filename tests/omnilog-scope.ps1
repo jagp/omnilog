@@ -42,5 +42,16 @@ Remove-Item Env:\CLAUDE_PROJECT_DIR -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $proj -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $g -Force -ErrorAction SilentlyContinue
 
+# 6) no CLAUDE_PROJECT_DIR -> fallback is the runtime working dir, NOT the plugin dir
+$cwd = Join-Path $env:TEMP ("omni-cwd-{0}" -f ([guid]::NewGuid().ToString('N')))
+New-Item -ItemType Directory -Path $cwd -Force | Out-Null
+Push-Location $cwd
+$rFallback = Resolve-OmnilogTarget
+$here = (Get-Location).Path
+Pop-Location
+Check 'no-project-dir => cwd log' ($rFallback -eq (Join-Path $here 'omnilog.md'))
+Check 'no-project-dir !=> plugin dir' ($rFallback -ne (Join-Path (Split-Path (Split-Path $hooks -Parent) -Parent) 'omnilog.md'))
+Remove-Item -LiteralPath $cwd -Recurse -Force -ErrorAction SilentlyContinue
+
 if ($fail -eq 0) { Write-Output 'PASS  omnilog-scope'; exit 0 }
 Write-Output ("FAIL  omnilog-scope ({0} case(s))" -f $fail); exit 1

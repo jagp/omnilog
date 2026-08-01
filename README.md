@@ -76,9 +76,39 @@ powershell -File tests/run-all.ps1
 
 ## Install as a plugin
 
-dev-strap is being packaged as a Claude Code plugin. During the experimental phase,
-enable it via the skills/plugins directory auto-load (no marketplace step), then choose
-a logging scope in each project.
+dev-strap is a Claude Code plugin distributed from its own repo, which doubles as a
+single-plugin marketplace (`.claude-plugin/marketplace.json`). Install it, then choose a
+logging scope in each project.
+
+```install
+/plugin marketplace add jagp/dev-strap
+/plugin install dev-strap@dev-strap
+```
+
+For local/experimental use before pulling from GitHub, add the marketplace from a path:
+`/plugin marketplace add ./path/to/dev-strap`.
+
+### Autoload (enable on every session)
+
+To load dev-strap automatically with no manual install step, register the marketplace and
+enable the plugin in `~/.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "dev-strap": { "source": { "source": "github", "repo": "jagp/dev-strap" } }
+  },
+  "enabledPlugins": {
+    "dev-strap@dev-strap": true
+  }
+}
+```
+
+Plugin hooks fire in every project, but omnilog and the ado board only write where you
+opt in (see Logging scope below), so global autoload is safe. **One exception — the
+dev-strap repo itself** already dogfoods these hooks via its project
+`.claude/settings.json`; don't also autoload the plugin there, or both copies fire
+(double logging).
 
 ### Logging scope
 
@@ -98,11 +128,29 @@ scope: per-project
 ```
 
 `$env:OMNILOG_FILE` overrides all of the above (used by the test suite). Scope changes
-take effect on the next Claude Code session.
+take effect on the next Claude Code session. Both artifacts always resolve into the
+calling project's directory (or a path you configure) — never into the plugin's own dir.
 
 The ado task-board mirror follows the same file with its own `ado:` key: it rides the
 per-project opt-in marker by default, `ado: on` forces it on (even under `global` scope,
-which alone never enables it), and `ado: off` disables it independently.
+which alone never enables it), and `ado: off` disables it independently. Pin the board to
+an explicit location with `ado-path:` (parity with omnilog's `path:`), e.g.
+`ado-path: C:\Users\<name>\.claude\task.ado`.
+
+### Task board (`/ado`)
+
+`ado` is a live, aggregated view of every task list the session's agents and subagents
+spin up, mirrored automatically by the `ado-tool` hook into `.claude/task.ado`
+(git-ignored working state). The mirror is **observe-only** — it holds a separate master
+copy and never touches an agent's real list.
+
+| Command | Does |
+|---------|------|
+| `/ado` | show the board verbatim (says "empty" until an agent creates a task) |
+| `/ado add "<text>"` | append your own item to a `### user` block, alongside the agents' lists |
+
+Enable/disable it per project with the `ado:` key described above, or pin its location
+with `ado-path:`. `$env:ADO_FILE` overrides everything; `$env:ADO_SCOPE=off` force-disables.
 
 ---
 
@@ -113,10 +161,12 @@ dev-strap/
 ├── CLAUDE.md                      # instructions Claude Code loads each session
 ├── omnilog.md                     # the action log (append-only ledger)
 ├── .claude-plugin/
+│   ├── marketplace.json           # single-plugin marketplace (source: "./")
 │   └── plugin.json                # plugin manifest (name, version, metadata)
 ├── .claude/
 │   └── settings.json              # dev-strap's own (dogfooding) hook registrations
 ├── commands/
+│   ├── ado.md                     # /ado task-board viewer + add
 │   └── omnilog-scope.md           # /omnilog-scope logging-scope chooser
 ├── hooks/
 │   ├── hooks.json                 # plugin hook registrations (installed copies)
