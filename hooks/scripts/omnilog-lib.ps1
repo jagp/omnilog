@@ -4,7 +4,8 @@
 #   * ASCII-only  - common Unicode punctuation is transliterated, anything else -> '?',
 #                   and the file is written with the ASCII encoder (belt + suspenders),
 #                   so the log renders identically in every terminal / editor / git diff.
-#   * <= 78 chars - the whole line fits a standard terminal, ellipsed with ASCII '...'.
+#   * one line    - whitespace (incl. newlines) collapses to single spaces; entries are
+#                   never truncated, the full detail is kept however long.
 # Verified by tests/omnilog-ascii.test.ps1.
 
 function Read-HookStdin {
@@ -127,7 +128,7 @@ function Initialize-OmnilogFile([string]$target) {
   catch { }
 }
 
-function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
+function Write-OmnilogEntry([string]$detail, [string]$tag) {
   $target = Resolve-OmnilogTarget
   if (-not $target) { return }   # scope=off, or per-project with no opt-in marker
   Initialize-OmnilogFile $target
@@ -137,20 +138,11 @@ function Write-OmnilogEntry([string]$detail, [string]$tag, [int]$max = 78) {
   if ($dir -and -not (Test-Path -LiteralPath $dir)) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
   }
-  # Sanitize BEFORE measuring so the width budget is computed on the final ASCII text.
   $detail = (ConvertTo-Ascii $detail) -replace '\s+', ' '
   $detail = $detail.Trim()
   $tag = ConvertTo-Ascii $tag
   $ts = Get-Date -Format 'yy-MM-dd HH:mm'
-  $budget = $max - "[$ts] ".Length - " <$tag>".Length
-  if ($budget -lt 5 -or -not $detail) {
-    $line = "[$ts] <$tag>"
-  }
-  elseif ($detail.Length -gt $budget) {
-    $line = "[$ts] " + $detail.Substring(0, $budget - 3) + '...' + " <$tag>"
-  }
-  else {
-    $line = "[$ts] $detail <$tag>"
-  }
+  if (-not $detail) { $line = "[$ts] <$tag>" }
+  else { $line = "[$ts] $detail <$tag>" }
   Add-Content -LiteralPath $target -Encoding ASCII -Value $line
 }

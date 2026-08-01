@@ -1,6 +1,6 @@
 # PostToolUse hook: append one line per tool call. Logs the model-authored description
 # (shell/agent) or filename/pattern (file/search) - never raw commands or file content, so
-# secrets never reach the log. ASCII-only + 78-char width are enforced centrally in
+# secrets never reach the log. ASCII-only + one-line output are enforced centrally in
 # omnilog-lib.ps1. <actionType> = literal tool name. No :cost (only Stop has a real one).
 $ErrorActionPreference = 'Stop'
 try {

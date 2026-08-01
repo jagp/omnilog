@@ -1,5 +1,5 @@
 # TEST (e2e): no omnilog hook writes a non-ASCII byte, even when fed a Unicode payload.
-# Also guards the 78-char width. Exit 0 = pass, 1 = fail.
+# Exit 0 = pass, 1 = fail.
 $ErrorActionPreference = 'Stop'
 $root  = Split-Path $PSScriptRoot -Parent
 $hooks = Join-Path $root 'hooks\scripts'
@@ -25,11 +25,9 @@ Get-Content -LiteralPath $log -Encoding ASCII | ForEach-Object { '{0,3} | {1}' -
 
 $bytes = [System.IO.File]::ReadAllBytes($log)
 $badBytes = @($bytes | Where-Object { $_ -gt 127 })
-$longLines = @(Get-Content -LiteralPath $log | Where-Object { $_.Length -gt 78 })
 Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
 
 $ok = $true
 if ($badBytes.Count -gt 0) { Write-Output ("FAIL  {0} non-ASCII byte(s)" -f $badBytes.Count); $ok = $false }
-if ($longLines.Count -gt 0) { Write-Output ("FAIL  {0} line(s) > 78 chars" -f $longLines.Count); $ok = $false }
-if ($ok) { Write-Output ("PASS  hooks-ascii-output ({0} bytes, all ASCII, all <= 78)" -f $bytes.Length); exit 0 }
+if ($ok) { Write-Output ("PASS  hooks-ascii-output ({0} bytes, all ASCII)" -f $bytes.Length); exit 0 }
 exit 1

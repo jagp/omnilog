@@ -39,7 +39,7 @@ Format: `[YY-MM-DD HH:mm] {description} <{actionType}[:{tokenCost}]>`
 - **Descriptions, never raw material.** Shell/agent lines log the model-authored `description` (e.g. `Rotate GitHub auth token`), never the command string; file tools log only the filename, never contents. **Secrets can't reach the log.**
 - **Only real, verified costs.** A `:tokenCost` appears solely on the `Stop` line, computed from the transcript. If a number can't be verified, no number is written — never a placeholder.
 - **Append-only & immutable.** The log is a ledger. Lines are only ever appended; nothing is edited or backfilled, even to fix a past mistake.
-- **Portable output.** Every line is pure ASCII and ≤ 78 chars, so it renders identically in a terminal, an editor, and `git diff`.
+- **Portable output.** Every line is pure ASCII, so it renders identically in a terminal, an editor, and `git diff`.
 
 ### How it works
 
@@ -51,7 +51,7 @@ Three [Claude Code hooks](https://code.claude.com/docs/en/hooks) registered in `
 | `Stop` | `omnilog-stop.ps1` | one line per response, with the real per-turn token cost |
 | `SubagentStop` | `omnilog-subagentstop.ps1` | one line when a spawned agent finishes |
 
-`omnilog-lib.ps1` is the single source of truth for the log's invariants: it reads stdin as UTF-8, forces **ASCII-only** output, enforces the **78-char** width, and resolves the log path.
+`omnilog-lib.ps1` is the single source of truth for the log's invariants: it reads stdin as UTF-8, forces **ASCII-only** single-line output, and resolves the log path.
 
 The `Stop` token cost is computed by walking the session transcript backward to the start of the turn, deduplicating by `requestId` (Claude Code writes one JSONL line per content block, all sharing a request's `usage`), excluding `<synthetic>` messages, and summing `output_tokens`. The full, cross-version-verified schema is documented in [`docs/autologging.md`](docs/autologging.md).
 
@@ -64,7 +64,7 @@ powershell -File tests/run-all.ps1
 | Test | Guards |
 |------|--------|
 | `ascii-sanitizer.ps1` | arbitrary Unicode → pure printable ASCII |
-| `hooks-ascii-output.ps1` | hooks never emit a non-ASCII byte; lines stay ≤ 78 |
+| `hooks-ascii-output.ps1` | hooks never emit a non-ASCII byte |
 | `line-format.ps1` | every line matches `[yy-MM-dd HH:mm] … <tag>` |
 | `omnilog-scope.ps1` | scope resolution: per-project opt-in, global, off, env override |
 | `ado.ps1` | ado task-board mirroring stays observe-only and ASCII |
@@ -186,7 +186,7 @@ dev-strap/
 ├── hooks/
 │   ├── hooks.json                 # plugin hook registrations (installed copies)
 │   └── scripts/
-│       ├── omnilog-lib.ps1        # shared: UTF-8 stdin, ASCII + 78-width, scope
+│       ├── omnilog-lib.ps1        # shared: UTF-8 stdin, ASCII one-liners, scope
 │       ├── omnilog-tool.ps1       # PostToolUse
 │       ├── omnilog-stop.ps1       # Stop (real token cost)
 │       ├── omnilog-subagentstop.ps1
