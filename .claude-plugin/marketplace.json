@@ -11,8 +11,8 @@
     {
       "name": "dev-strap",
       "source": "./",
-      "version": "0.2.1",
-      "description": "Project scaffold for Claude Code + VSCode: omnilog action logging + ado cross-agent task board, with git-flow, Trunk linting, and PowerShell tests."
+      "version": "0.3.0",
+      "description": "Bootstrasp your dev environments.  Scaffolding for ClaudeCode + VSCode: logging, task/subagent visibility, git workflow support (gitflow), Trunk linting, and PowerShell tests."
     }
   ]
 }

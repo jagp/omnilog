@@ -112,13 +112,15 @@ dev-strap repo itself** already dogfoods these hooks via its project
 
 ### Logging scope
 
-Plugin hooks fire in every project, so omnilog only writes where you opt in. Configure
+Logging is **on by default**: in any project you work in, omnilog seeds a fresh
+`omnilog.md` in the repo root on the first logged action and appends from there. Nothing
+to create by hand — install the plugin and a new project starts logging itself. Configure
 per project with `/omnilog-scope`, or by hand in `.claude/omnilog.local.md` (git-ignored):
 
 | Scope | Behavior | Writes when |
 |-------|----------|-------------|
-| `per-project` (default) | writes `omnilog.md` in the repo root | only if `omnilog.md` exists (the opt-in marker) |
-| `global` | writes one shared log at `path:` (default `~/.claude/omnilog.md`) | always |
+| `per-project` (default) | writes `omnilog.md` in the repo root, creating it if absent | unless switched off |
+| `global` | writes one shared log at `path:` (default `~/.claude/omnilog.md`) | unless switched off |
 | `off` | omnilog disabled for this project | never |
 
 ```yaml
@@ -126,6 +128,19 @@ per project with `/omnilog-scope`, or by hand in `.claude/omnilog.local.md` (git
 scope: per-project
 ---
 ```
+
+**Turning it off.** `enabled:` is an explicit master switch, independent of scope —
+useful when a repo shouldn't log at all (e.g. developing the plugin itself):
+
+```yaml
+---
+enabled: false
+---
+```
+
+It accepts `false` / `off` / `no` / `0` (and `true` / `on` / `yes` / `1` to force on).
+`$env:OMNILOG_ENABLED=off` is the machine-wide kill switch and beats everything,
+including `$env:OMNILOG_FILE`.
 
 `$env:OMNILOG_FILE` overrides all of the above (used by the test suite). Scope changes
 take effect on the next Claude Code session. Both artifacts always resolve into the
