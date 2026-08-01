@@ -104,6 +104,21 @@ The ado task-board mirror follows the same file with its own `ado:` key: it ride
 per-project opt-in marker by default, `ado: on` forces it on (even under `global` scope,
 which alone never enables it), and `ado: off` disables it independently.
 
+### Task board (`/ado`)
+
+`ado` is a live, aggregated view of every task list the session's agents and subagents
+spin up, mirrored automatically by the `ado-tool` hook into `.claude/task.ado`
+(git-ignored working state). The mirror is **observe-only** — it holds a separate master
+copy and never touches an agent's real list.
+
+| Command | Does |
+|---------|------|
+| `/ado` | show the board verbatim (says "empty" until an agent creates a task) |
+| `/ado add "<text>"` | append your own item to a `### user` block, alongside the agents' lists |
+
+Enable/disable it per project with the `ado:` key described above; `$env:ADO_FILE`
+overrides the board path.
+
 ---
 
 ## Repository layout
@@ -117,6 +132,7 @@ dev-strap/
 ├── .claude/
 │   └── settings.json              # dev-strap's own (dogfooding) hook registrations
 ├── commands/
+│   ├── ado.md                     # /ado task-board viewer + add
 │   └── omnilog-scope.md           # /omnilog-scope logging-scope chooser
 ├── hooks/
 │   ├── hooks.json                 # plugin hook registrations (installed copies)
