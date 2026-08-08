@@ -22,6 +22,12 @@ lint:
     - markdownlint@0.49.0
     - prettier@3.9.1
     - trufflehog@3.95.6
+  # omnilog.md is a generated append-only activity log, not authored prose.
+  # Exempt it from every linter and formatter.
+  ignore:
+    - linters: [ALL]
+      paths:
+        - omnilog.md
 actions:
   disabled:
     - trunk-announce
