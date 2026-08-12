@@ -4,6 +4,17 @@ All notable changes to dev-strap are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1]
+
+### Fixed
+
+- **Corrupt `plugin.json`.** The develop merge in `36c74b7` was hand-resolved and left
+  two stray `},` fragments in `.claude-plugin/plugin.json` — the manifest stopped
+  parsing, and installs surfaced "corrupt manifest file" in the plugin manager.
+  Structure repaired (first check of `tests/plugin-manifest.ps1` covers this), the
+  "Bootstrasp" typo fixed, and the same description mirrored into `marketplace.json`.
+  Patch bump so the version-keyed plugin cache re-extracts a clean copy on update.
+
 ## [0.3.0]
 
 ### Changed
