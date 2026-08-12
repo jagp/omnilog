@@ -11,8 +11,8 @@
     {
       "name": "dev-strap",
       "source": "./",
-      "version": "0.3.0",
-      "description": "Bootstrasp your dev environments.  Scaffolding for ClaudeCode + VSCode: logging, task/subagent visibility, git workflow support (gitflow), Trunk linting, and PowerShell tests."
+      "version": "0.3.1",
+      "description": "Bootstrap your dev environments.  Scaffolding for ClaudeCode + VSCode: logging, task/subagent visibility, git workflow support (gitflow), Trunk linting, and PowerShell tests."
     }
   ]
 }
