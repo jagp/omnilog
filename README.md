@@ -36,7 +36,7 @@ Format: `[YY-MM-DD HH:mm] {description} <{actionType}[:{tokenCost}]>`
 ### Design principles
 
 - **Log what you can't see.** Your prompts and the assistant's visible replies don't need restating; the *invisible* work — tool calls, subagent spawns — does.
-- **Descriptions, never raw material.** Shell/agent lines log the model-authored `description` (e.g. `Rotate GitHub auth token`), never the command string; file tools log only the filename, never contents. **Secrets can't reach the log.**
+- **Descriptions, never raw material.** Shell/agent lines log the model-authored `description` (e.g. `Rotate GitHub auth token`), never the command string; file tools log only the file's project-relative path, never contents. **Secrets can't reach the log.**
 - **Only real, verified costs.** A `:tokenCost` appears solely on the `Stop` line, computed from the transcript. If a number can't be verified, no number is written — never a placeholder.
 - **Append-only & immutable.** The log is a ledger. Lines are only ever appended; nothing is edited or backfilled, even to fix a past mistake.
 - **Portable output.** Every line is pure ASCII, so it renders identically in a terminal, an editor, and `git diff`.
@@ -47,7 +47,7 @@ Three [Claude Code hooks](https://code.claude.com/docs/en/hooks) registered in `
 
 | Event | Script | Emits |
 |-------|--------|-------|
-| `PostToolUse` | `omnilog-tool.ps1` | one line per tool call — `description` / filename / pattern |
+| `PostToolUse` | `omnilog-tool.ps1` | one line per tool call — `description` / project-relative path / pattern |
 | `Stop` | `omnilog-stop.ps1` | one line per response, with the real per-turn token cost |
 | `SubagentStop` | `omnilog-subagentstop.ps1` | one line when a spawned agent finishes |
 

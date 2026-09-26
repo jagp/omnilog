@@ -4,6 +4,16 @@ All notable changes to dev-strap are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **File-tool lines keep the path.** `Read`/`Edit`/`Write`/`MultiEdit` lines in
+  `omnilog.md` now log the file's path relative to `$CLAUDE_PROJECT_DIR`
+  (e.g. `hooks\scripts\omnilog-tool.ps1 <Read>`) instead of the bare filename. Files
+  outside the project are logged with the path as given. Covered by
+  `tests/file-path-logging.ps1`.
+
 ## [0.3.1]
 
 ### Fixed

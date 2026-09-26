@@ -189,7 +189,8 @@ A logging hook should **always exit 0** and write to the file directly.
 - **Resolved — log the model-authored description where it exists; `<toolName>` always:**
   - `Bash`/`PowerShell`/`Agent` → log `tool_input.description` (the one-line summary I wrote
     when calling the tool). Never the raw command — which also keeps secrets out of the log.
-  - `Edit`/`Write`/`Read` → filename only (never file content); `Grep`/`Glob` → the pattern.
+  - `Edit`/`Write`/`Read` → the file's path relative to `$CLAUDE_PROJECT_DIR`, or the path as
+    given when it lies outside the project (never file content); `Grep`/`Glob` → the pattern.
   - `{actionType}` = the literal tool name; the `:cost` suffix appears only on the `Stop` line.
 
 Sources: `code.claude.com/docs/en/hooks.md`, `hooks-guide.md`, `sessions.md`;
@@ -201,7 +202,7 @@ Three hooks in `.claude/hooks/`, registered in `.claude/settings.json`:
 
 | Event                     | Script                     | Line format                                                                                                                                                                                                                                                             |
 | ------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PostToolUse` (all tools) | `omnilog-tool.ps1`         | `[ts] <description> <ToolName>` — shell/agent → `tool_input.description` (the summary I wrote, secret-safe); file tools → filename; `Grep`/`Glob` → pattern; Agent → `Spun off new subagent (#id) for <purpose>`. Logged in full, no width cap; no `:cost`. |
+| `PostToolUse` (all tools) | `omnilog-tool.ps1`         | `[ts] <description> <ToolName>` — shell/agent → `tool_input.description` (the summary I wrote, secret-safe); file tools → project-relative path; `Grep`/`Glob` → pattern; Agent → `Spun off new subagent (#id) for <purpose>`. Logged in full, no width cap; no `:cost`. |
 | `Stop`                    | `omnilog-stop.ps1`         | `[ts] response - N tool call(s) <Stop:tokens>` - tokens = summed output_tokens for the turn, omitted if unmeasurable                                                                                                                                                    |
 | `SubagentStop`            | `omnilog-subagentstop.ps1` | `[ts] subagent <id> (<type>) finished <SubagentStop>`                                                                                                                                                                                                                   |
 
@@ -213,7 +214,7 @@ empty-turn and synthetic-only turns -> no cost field; agent spawn -> id referenc
 
 **Secrets (resolved):** the log stores model-authored _descriptions_, not raw material. Shell/agent
 tools log `tool_input.description` (e.g. `Rotate GitHub auth token <Bash>`) — never the
-command string; file tools log only the filename, never content. So secret _values_ never
+command string; file tools log only the file's path, never content. So secret _values_ never
 reach the log, and `omnilog.md` is safe to track. (Belt-and-suspenders: the repo's
 trufflehog / git-diff-check still scan on commit.)
 
