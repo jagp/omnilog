@@ -42,12 +42,9 @@ function ConvertTo-OmnilogBool([string]$v) {
 function Get-OmnilogConfig {
   # Reads .claude/omnilog.local.md frontmatter from the project dir.
   # Returns @{ scope = 'per-project'|'global'|'off'; path = <string|$null>;
-  #            ado = $null|'on'|'off'; adoPath = <string|$null>;
   #            enabled = $null|$true|$false }
   #   'enabled:'  -- explicit master on/off switch ($null = unset = on).
-  #   'ado:'      -- the task board's independent on/off switch.
-  #   'ado-path:' -- explicit board location override (parity with omnilog 'path:').
-  $scope = 'per-project'; $path = $null; $ado = $null; $adoPath = $null; $enabled = $null
+  $scope = 'per-project'; $path = $null; $enabled = $null
   if ($env:CLAUDE_PROJECT_DIR) {
     $cfg = Join-Path $env:CLAUDE_PROJECT_DIR '.claude\omnilog.local.md'
     if (Test-Path -LiteralPath $cfg) {
@@ -67,13 +64,11 @@ function Get-OmnilogConfig {
       foreach ($ln in $lines) {
         if ($ln -match '^\s*scope:\s*(\S+)') { $scope = $Matches[1].Trim('"').ToLower() }
         elseif ($ln -match '^\s*path:\s*(.+?)\s*$') { $path = $Matches[1].Trim().Trim('"') }
-        elseif ($ln -match '^\s*ado-path:\s*(.+?)\s*$') { $adoPath = $Matches[1].Trim().Trim('"') }
-        elseif ($ln -match '^\s*ado:\s*(\S+)') { $ado = $Matches[1].Trim('"').ToLower() }
         elseif ($ln -match '^\s*enabled:\s*(\S+)') { $enabled = (ConvertTo-OmnilogBool $Matches[1]) }
       }
     }
   }
-  return @{ scope = $scope; path = $path; ado = $ado; adoPath = $adoPath; enabled = $enabled }
+  return @{ scope = $scope; path = $path; enabled = $enabled }
 }
 
 function Resolve-OmnilogTarget {
