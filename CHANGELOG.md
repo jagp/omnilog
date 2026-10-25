@@ -1,18 +1,30 @@
 # Changelog
 
-All notable changes to dev-strap are recorded here. Format follows
+All notable changes to omnilog are recorded here. Entries before 1.0.0 are from
+the `dev-strap` plugin omnilog was split out of. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0]
 
 ### Changed
+
+- **Split out of dev-strap as its own plugin.** The plugin is now `omnilog`
+  (`omnilog@interface-layer`), published through the InterfaceLayer marketplace
+  (`jagp/interface-layer`). The repo no longer ships its own `marketplace.json`.
+  Install: `/plugin marketplace add jagp/interface-layer`, then
+  `/plugin install omnilog@interface-layer`.
 
 - **File-tool lines keep the path.** `Read`/`Edit`/`Write`/`MultiEdit` lines in
   `omnilog.md` now log the file's path relative to `$CLAUDE_PROJECT_DIR`
   (e.g. `hooks\scripts\omnilog-tool.ps1 <Read>`) instead of the bare filename. Files
   outside the project are logged with the path as given. Covered by
   `tests/file-path-logging.ps1`.
+
+### Removed
+
+- **The `ado` task board** (`ado-tool.ps1`, `ado-lib.ps1`, `/ado`, and the `ado:` /
+  `ado-path:` config keys). dev-strap is retired and ado was not carried over.
 
 ## [0.3.1]
 

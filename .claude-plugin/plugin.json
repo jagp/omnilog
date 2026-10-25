@@ -1,11 +1,12 @@
 {
-  "name": "dev-strap",
-  "version": "0.3.1",
-  "description": "Bootstrap your dev environments.  Scaffolding for ClaudeCode + VSCode: logging, task/subagent visibility, git workflow support (gitflow), Trunk linting, and PowerShell tests.",
+  "name": "omnilog",
+  "version": "1.0.0",
+  "description": "Append-only action log for Claude Code: hooks write one ASCII line to omnilog.md per tool call, per response (with real token cost), and per subagent finish.",
   "author": {
     "name": "Jared Parmenter",
     "email": "jared.parmenter@gmail.com"
   },
+  "homepage": "https://github.com/jagp/omnilog",
   "license": "MIT",
-  "keywords": ["scaffold", "logging", "git-flow", "hooks", "powershell"]
+  "keywords": ["logging", "hooks", "audit", "token-cost", "powershell"]
 }

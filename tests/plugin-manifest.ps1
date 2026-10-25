@@ -1,5 +1,5 @@
 # TEST (install): the plugin is actually installable/activatable as shipped.
-# Validates the three manifests (plugin.json, marketplace.json, hooks.json), that
+# Validates the manifests (plugin.json, hooks.json), that
 # every hook command points at a script that exists, is quoted (plugin cache paths
 # contain spaces), runs with -NoProfile (user profiles must not leak into hooks),
 # and that every shipped .ps1 parses cleanly under Windows PowerShell 5.1.
@@ -13,20 +13,16 @@ function Check($name, $cond) {
 }
 
 # --- manifests parse -------------------------------------------------------------
-$plugin = $null; $market = $null; $hooksCfg = $null
+$plugin = $null; $hooksCfg = $null
 try { $plugin = Get-Content -Raw -LiteralPath (Join-Path $root '.claude-plugin\plugin.json') | ConvertFrom-Json } catch { }
-try { $market = Get-Content -Raw -LiteralPath (Join-Path $root '.claude-plugin\marketplace.json') | ConvertFrom-Json } catch { }
 try { $hooksCfg = Get-Content -Raw -LiteralPath (Join-Path $root 'hooks\hooks.json') | ConvertFrom-Json } catch { }
 Check 'plugin.json parses'      ($null -ne $plugin)
-Check 'marketplace.json parses' ($null -ne $market)
 Check 'hooks.json parses'       ($null -ne $hooksCfg)
 if ($fail -gt 0) { Write-Output ("FAIL  plugin-manifest ({0} case(s))" -f $fail); exit 1 }
 
-# --- identity + version parity (a drifted version breaks marketplace updates) ----
+# --- identity (the InterfaceLayer marketplace entry keys on name + version) -----
 Check 'plugin name present'        ([string]$plugin.name)
-$entry = $market.plugins | Where-Object { $_.name -eq $plugin.name } | Select-Object -First 1
-Check 'marketplace lists plugin'   ($null -ne $entry)
-Check 'versions in sync'           ($entry -and ([string]$entry.version -eq [string]$plugin.version))
+Check 'plugin version is SemVer'   ([string]$plugin.version -match '^\d+\.\d+\.\d+$')
 
 # --- every hook command: quoted ${CLAUDE_PLUGIN_ROOT} path, -NoProfile, real file -
 $cmds = @()

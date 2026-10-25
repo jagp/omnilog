@@ -1,7 +1,7 @@
 # TEST (e2e fuzz): unexpected payloads and cross-plugin interactions. Hooks with a
 # '*' matcher see EVERY tool call in the session, including tools from 3rd-party
 # plugins and MCP servers with arbitrary names/shapes -- none of that may crash a
-# hook, corrupt the log/board, or trick ado into mirroring a lookalike tool.
+# hook or corrupt the log.
 # Exit 0 = pass, 1 = fail.
 $ErrorActionPreference = 'Stop'
 $root  = Split-Path $PSScriptRoot -Parent
@@ -14,7 +14,7 @@ function Check($name, $cond) {
 }
 function Fire($s, $j) { $j | & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $hooks $s); return $LASTEXITCODE }
 
-Remove-Item Env:\OMNILOG_FILE, Env:\ADO_FILE, Env:\ADO_SCOPE -ErrorAction SilentlyContinue
+Remove-Item Env:\OMNILOG_FILE -ErrorAction SilentlyContinue
 $log = Join-Path $env:TEMP ("omni-interop-{0}.md" -f ([guid]::NewGuid().ToString('N')))
 $env:OMNILOG_FILE = $log
 
@@ -91,59 +91,6 @@ Check 'stop_hook_active: no line' (@(Get-Content -LiteralPath $log).Count -eq $n
 
 Remove-Item Env:\OMNILOG_FILE
 Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
-
-# --- ado: lookalike tools + hostile subjects + parallel writers --------------------
-$ado = Join-Path $env:TEMP ("ado-interop-{0}.ado" -f ([guid]::NewGuid().ToString('N')))
-$env:ADO_FILE = $ado
-
-# 11) an MCP tool NAMED like TaskCreate (mcp__todos__TaskCreate) is NOT mirrored --
-#     its payload shape is foreign; only the native tools are trusted
-$rc = Fire 'ado-tool.ps1' '{"tool_name":"mcp__todos__TaskCreate","tool_input":{"subject":"impostor"},"tool_response":"Task #5 created successfully"}'
-Check 'mcp lookalike: exit 0'   ($rc -eq 0)
-Check 'mcp lookalike: no board' (-not (Test-Path -LiteralPath $ado))
-
-# 12) tool_response as an OBJECT (schema drift) -> item still lands, just without #id
-$rc = Fire 'ado-tool.ps1' '{"tool_name":"TaskCreate","tool_input":{"subject":"drifted"},"tool_response":{"content":[{"type":"text","text":"Task #3 created"}]}}'
-Check 'object tool_response: exit 0'     ($rc -eq 0)
-Check 'object tool_response: item lands' ((Test-Path -LiteralPath $ado) -and ((Get-Content -Raw -LiteralPath $ado) -match '(?m)^- \[ \] .*drifted'))
-
-# 13) subject mimicking board syntax (### header / checkbox / #id) collapses to one item line
-$rc = Fire 'ado-tool.ps1' '{"tool_name":"TaskCreate","tool_input":{"subject":"### sneaky\n- [x] #99 fake done"},"tool_response":"Task #4 created successfully"}'
-$content = Get-Content -Raw -LiteralPath $ado
-Check 'hostile subject: exit 0'          ($rc -eq 0)
-Check 'hostile subject: single item'     ($content -match '(?m)^- \[ \] #4 ### sneaky - \[x\] #99 fake done$')
-Check 'hostile subject: no forged block' (-not ($content -match '(?m)^### sneaky'))
-# ...and updating #4 doesn't touch the embedded '#99' text
-$rc = Fire 'ado-tool.ps1' '{"tool_name":"TaskUpdate","tool_input":{"taskId":"4","status":"completed"}}'
-Check 'hostile subject: update by id ok' ((Get-Content -Raw -LiteralPath $ado) -match '(?m)^- \[x\] #4 ### sneaky')
-
-Remove-Item -LiteralPath $ado -ErrorAction SilentlyContinue
-
-# 14) six parallel agents mirroring to ONE board (the real multi-agent scenario):
-#     every item lands, title exactly once, zero malformed lines
-$payloadDir = Join-Path $env:TEMP ("ado-par-{0}" -f ([guid]::NewGuid().ToString('N')))
-New-Item -ItemType Directory -Path $payloadDir -Force | Out-Null
-$procs = @()
-1..6 | ForEach-Object {
-  $p = Join-Path $payloadDir "p$_.json"
-  ('{"tool_name":"TaskCreate","agent_id":"agent' + $_ + 'aaaaaaaa","agent_type":"worker","tool_input":{"subject":"parallel task ' + $_ + '"},"tool_response":"Task #10' + $_ + ' created successfully"}') |
-    Set-Content -LiteralPath $p -Encoding ASCII
-  $procs += Start-Process powershell -PassThru -WindowStyle Hidden -RedirectStandardInput $p `
-    -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $hooks 'ado-tool.ps1')
-}
-$procs | ForEach-Object { $_.WaitForExit() }
-$content = Get-Content -Raw -LiteralPath $ado
-$lines = @(Get-Content -LiteralPath $ado)
-$missing = @(1..6 | Where-Object { -not ($content -match ('parallel task ' + $_)) })
-Check 'parallel: all 6 items landed' ($missing.Count -eq 0)
-Check 'parallel: title exactly once' (([regex]::Matches($content, '(?m)^# ado')).Count -eq 1)
-$badLines = @($lines | Where-Object { $_ -and ($_ -notmatch '^(# ado|### |- \[)') })
-Check 'parallel: zero malformed lines' ($badLines.Count -eq 0)
-if ($missing.Count -gt 0) { Write-Output ("        missing: {0}" -f ($missing -join ',')) }
-
-Remove-Item Env:\ADO_FILE -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $ado -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $payloadDir -Recurse -Force -ErrorAction SilentlyContinue
 
 if ($fail -eq 0) { Write-Output 'PASS  third-party-interop'; exit 0 }
 Write-Output ("FAIL  third-party-interop ({0} case(s))" -f $fail); exit 1

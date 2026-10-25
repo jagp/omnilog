@@ -70,7 +70,6 @@ Set-Content -LiteralPath $cfg2 -Value "---`nenabled: true`n---" -Encoding ASCII
 Check 'enabled:true => project log' ((Resolve-OmnilogTarget) -eq $log2)
 
 # 9) $env:OMNILOG_ENABLED=off is the master kill switch -- beats OMNILOG_FILE
-#    (mirrors ADO_SCOPE=off beating ADO_FILE)
 Remove-Item -LiteralPath $cfg2 -Force -ErrorAction SilentlyContinue
 $env:OMNILOG_ENABLED = 'off'
 $env:OMNILOG_FILE = 'X:\override.md'

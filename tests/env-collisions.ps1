@@ -5,14 +5,14 @@
 # frontmatter, not lookalike prose in the markdown body. Exit 0 = pass, 1 = fail.
 $ErrorActionPreference = 'Stop'
 $hooks = Join-Path (Split-Path $PSScriptRoot -Parent) 'hooks\scripts'
-. (Join-Path $hooks 'ado-lib.ps1')   # also dot-sources omnilog-lib.ps1
+. (Join-Path $hooks 'omnilog-lib.ps1')
 
 $fail = 0
 function Check($name, $cond) {
   if ($cond) { Write-Output "  ok   $name" } else { Write-Output "  FAIL $name"; $script:fail++ }
 }
 
-Remove-Item Env:\OMNILOG_FILE, Env:\ADO_FILE, Env:\ADO_SCOPE -ErrorAction SilentlyContinue
+Remove-Item Env:\OMNILOG_FILE -ErrorAction SilentlyContinue
 $proj = Join-Path $env:TEMP ("omni-env-{0}" -f ([guid]::NewGuid().ToString('N')))
 New-Item -ItemType Directory -Path (Join-Path $proj '.claude') -Force | Out-Null
 $env:CLAUDE_PROJECT_DIR = $proj
@@ -25,16 +25,6 @@ Set-Content -LiteralPath $log -Value '' -Encoding ASCII   # opt-in marker for th
 $env:OMNILOG_FILE = '   '
 Check 'whitespace OMNILOG_FILE ignored' ((Resolve-OmnilogTarget) -eq $log)
 Remove-Item Env:\OMNILOG_FILE
-
-# 2) whitespace-only ADO_FILE -> same
-$env:ADO_FILE = "`t "
-Check 'whitespace ADO_FILE ignored' ((Resolve-AdoTarget) -eq (Join-Path $proj '.claude\task.ado'))
-Remove-Item Env:\ADO_FILE
-
-# 3) ADO_SCOPE is case-insensitive (another tool may export 'OFF')
-$env:ADO_SCOPE = 'OFF'
-Check 'ADO_SCOPE=OFF (upper) => off' ($null -eq (Resolve-AdoTarget))
-Remove-Item Env:\ADO_SCOPE
 
 # 4) CLAUDE_PROJECT_DIR with a trailing backslash still finds marker + config
 $env:CLAUDE_PROJECT_DIR = $proj + '\'
@@ -60,10 +50,8 @@ scope: per-project
 To disable logging entirely, set the frontmatter to:
 
     scope: off
-    ado: off
 "@
 Check 'prose scope: off ignored'  ((Resolve-OmnilogTarget) -eq $log)
-Check 'prose ado: off ignored'    ((Resolve-AdoTarget) -eq (Join-Path $proj '.claude\task.ado'))
 
 # 8) duplicate key inside frontmatter: last one wins (pinned so edits are predictable)
 Set-Content -LiteralPath $cfg -Encoding ASCII -Value "---`nscope: off`nscope: per-project`n---"

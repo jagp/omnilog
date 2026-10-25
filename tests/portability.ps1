@@ -13,10 +13,10 @@ function Check($name, $cond) {
   if ($cond) { Write-Output "  ok   $name" } else { Write-Output "  FAIL $name"; $script:fail++ }
 }
 
-Remove-Item Env:\OMNILOG_FILE, Env:\ADO_FILE, Env:\ADO_SCOPE -ErrorAction SilentlyContinue
+Remove-Item Env:\OMNILOG_FILE -ErrorAction SilentlyContinue
 
 # --- relocate the scripts to a path with spaces (simulated plugin cache) ----------
-$fake = Join-Path $env:TEMP ("dev strap cache {0}\hooks\scripts" -f ([guid]::NewGuid().ToString('N').Substring(0, 8)))
+$fake = Join-Path $env:TEMP ("omnilog plugin cache {0}\hooks\scripts" -f ([guid]::NewGuid().ToString('N').Substring(0, 8)))
 New-Item -ItemType Directory -Path $fake -Force | Out-Null
 Copy-Item -Path (Join-Path $hooks '*.ps1') -Destination $fake
 
@@ -27,14 +27,6 @@ $env:OMNILOG_FILE = $log
 Check 'spaced path: omnilog hook exit 0' ($LASTEXITCODE -eq 0)
 Check 'spaced path: line written'        ((Test-Path -LiteralPath $log) -and ((Get-Content -Raw -LiteralPath $log) -match 'from spaced path'))
 Remove-Item Env:\OMNILOG_FILE
-
-$ado = Join-Path $env:TEMP ("ado-port-{0}.ado" -f ([guid]::NewGuid().ToString('N')))
-$env:ADO_FILE = $ado
-'{"tool_name":"TaskCreate","tool_input":{"subject":"spaced board"},"tool_response":"Task #1 created successfully"}' |
-  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $fake 'ado-tool.ps1')
-Check 'spaced path: ado hook exit 0' ($LASTEXITCODE -eq 0)
-Check 'spaced path: board written'   ((Test-Path -LiteralPath $ado) -and ((Get-Content -Raw -LiteralPath $ado) -match 'spaced board'))
-Remove-Item Env:\ADO_FILE
 
 # --- scripts must not silently depend on the caller's working directory -----------
 # (hooks run with an arbitrary cwd; only CLAUDE_PROJECT_DIR / env overrides count)
@@ -62,7 +54,7 @@ if ($pwsh) {
 }
 
 Remove-Item -LiteralPath (Split-Path (Split-Path $fake -Parent) -Parent) -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $log, $ado -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
 
 if ($fail -eq 0) { Write-Output 'PASS  portability'; exit 0 }
 Write-Output ("FAIL  portability ({0} case(s))" -f $fail); exit 1
