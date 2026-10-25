@@ -1,0 +1,5 @@
+﻿# Real conversation transcripts copied here as test fixtures.
+# They originate from other projects and may contain secrets / PII.
+# Do NOT commit them - trufflehog is enabled in this repo Trunk config.
+fixtures/
+readable/
