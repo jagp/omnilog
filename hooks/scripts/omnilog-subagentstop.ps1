@@ -1,6 +1,7 @@
 # SubagentStop hook: append one line when a spawned agent finishes, referencing it. No :cost
-# (no verifiable subagent cost at this event). ASCII-only + width enforced in omnilog-lib.ps1.
-# Field names for this event are undocumented, so read defensively. exit 0 (never blocks).
+# (subagent cost is not computed yet). ASCII-only + one-line output enforced in omnilog-lib.ps1.
+# agent_id / agent_type are documented; the camelCase spellings are read as a fallback.
+# exit 0 (never blocks).
 $ErrorActionPreference = 'Stop'
 try {
   . (Join-Path $PSScriptRoot 'omnilog-lib.ps1')
