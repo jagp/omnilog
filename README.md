@@ -31,25 +31,25 @@ Format: `[YY-MM-DD HH:mm] {description} <{actionType}[:{tokenCost}]>`
 
 ## Design principles
 
-- **Log what you can't see.** Your prompts and the assistant's visible replies don't need restating; the *invisible* work — tool calls, subagent spawns — does.
-- **Descriptions, never raw material.** Shell/agent lines log the model-authored `description` (e.g. `Rotate GitHub auth token`), never the command string; file tools log only the file's project-relative path, never contents. **Secrets can't reach the log.**
+- **Log what you can't see.** Your prompts and the assistant's visible replies don't need restating; the _invisible_ work — tool calls, subagent spawns — does.
+- **Descriptions, never raw material.** Shell/agent lines log the model-authored `description` (e.g. `Rotate GitHub auth token`), never the command string; file tools log only the file's project-relative path, never contents; `WebFetch` logs only the URL's host; MCP and other tools log just their name, since their inputs are user data. **Secrets can't reach the log.**
 - **Only real, verified costs.** A `:tokenCost` appears solely on the `Stop` line, computed from the transcript. If a number can't be verified, no number is written — never a placeholder.
 - **Append-only & immutable.** The log is a ledger. Lines are only ever appended; nothing is edited or backfilled, even to fix a past mistake.
 - **Portable output.** Every line is pure ASCII, so it renders identically in a terminal, an editor, and `git diff`.
 
 ## How it works
 
-Three [Claude Code hooks](https://code.claude.com/docs/en/hooks) registered in `hooks/hooks.json`, all routing through one shared library:
+Three hook scripts, registered for five [Claude Code hook](https://code.claude.com/docs/en/hooks) events in `hooks/hooks.json`, all routing through one shared library:
 
-| Event | Script | Emits |
-|-------|--------|-------|
-| `PostToolUse` | `omnilog-tool.ps1` | one line per tool call — `description` / project-relative path / pattern |
-| `Stop` | `omnilog-stop.ps1` | one line per response, with the real per-turn token cost |
-| `SubagentStop` | `omnilog-subagentstop.ps1` | one line when a spawned agent finishes |
+| Event                                | Script                     | Emits                                                                                                            |
+| ------------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `PostToolUse` / `PostToolUseFailure` | `omnilog-tool.ps1`         | one line per tool call — `description` / project-relative path / pattern / host; failures are prefixed `failed:` |
+| `Stop` / `StopFailure`               | `omnilog-stop.ps1`         | one line per response, with the real per-turn token cost; a turn ended by an API error logs as `response failed` |
+| `SubagentStop`                       | `omnilog-subagentstop.ps1` | one line when a spawned agent finishes                                                                           |
 
 `omnilog-lib.ps1` is the single source of truth for the log's invariants: it reads stdin as UTF-8, forces **ASCII-only** single-line output, and resolves the log path.
 
-The `Stop` token cost is computed by walking the session transcript backward to the start of the turn, deduplicating by `requestId` (Claude Code writes one JSONL line per content block, all sharing a request's `usage`), excluding `<synthetic>` messages, and summing `output_tokens`. The full, cross-version-verified schema is documented in [`docs/autologging.md`](docs/autologging.md).
+The `Stop` token cost is computed by walking the session transcript backward to the start of the turn (stepping over tool results and the `isMeta` lines Claude Code injects mid-turn), deduplicating by `requestId` (Claude Code writes one JSONL line per content block, all sharing a request's `usage`), excluding `<synthetic>` messages, and summing `output_tokens`. The full, cross-version-verified schema is documented in [`docs/autologging.md`](docs/autologging.md).
 
 ## Logging scope
 
@@ -58,11 +58,11 @@ Logging is **on by default**: in any project you work in, omnilog seeds a fresh
 Configure per project with `/omnilog-scope`, or by hand in `.claude/omnilog.local.md`
 (git-ignored):
 
-| Scope | Behavior |
-|-------|----------|
-| `per-project` (default) | writes `omnilog.md` in the repo root, creating it if absent |
-| `global` | writes one shared log at `path:` (default `~/.claude/omnilog.md`) |
-| `off` | omnilog disabled for this project |
+| Scope                   | Behavior                                                          |
+| ----------------------- | ----------------------------------------------------------------- |
+| `per-project` (default) | writes `omnilog.md` in the repo root, creating it if absent       |
+| `global`                | writes one shared log at `path:` (default `~/.claude/omnilog.md`) |
+| `off`                   | omnilog disabled for this project                                 |
 
 ```yaml
 ---

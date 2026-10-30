@@ -36,17 +36,16 @@ Everything targets **Windows PowerShell 5.1** (`powershell`, not `pwsh`);
 non-Windows machine without PowerShell installed, the suite cannot run — say so rather
 than substituting a different verification.
 
-Known failures: `env-collisions.ps1` fails 2 cases (`whitespace OMNILOG_FILE ignored`,
-`missing project dir => null`), inherited from dev-strap.
+Known failures: none. The full suite is expected to pass.
 
 ## Architecture
 
 ### Event flow
 
 ```text
-PostToolUse ──> omnilog-tool.ps1 (one log line per tool call)
-Stop        ──> omnilog-stop.ps1 (one line per response, real token cost)
-SubagentStop ─> omnilog-subagentstop.ps1
+PostToolUse, PostToolUseFailure ──> omnilog-tool.ps1 (one line per tool call)
+Stop, StopFailure ───────────────> omnilog-stop.ps1 (one line per response, real token cost)
+SubagentStop ────────────────────> omnilog-subagentstop.ps1
 ```
 
 Hooks are registered in `hooks/hooks.json`. Paths use `${CLAUDE_PLUGIN_ROOT}` and must
@@ -67,10 +66,13 @@ tags honest when the schema evolves.
 - **Append-only ledger.** `omnilog.md` lines are only ever appended — never rewritten,
   even to correct a known-bad entry.
 - **Descriptions, never raw material.** Shell/agent tools log `tool_input.description`,
-  file tools the project-relative path only, Grep/Glob the pattern — never command
-  strings or file content, so secrets cannot reach the log.
-- **Only real, verified token costs.** The Stop hook walks the transcript backward,
-  keeps top-level `type == "assistant"` lines, excludes `model == "<synthetic>"`,
+  file tools the project-relative path only, Grep/Glob the pattern, WebFetch the URL's
+  host — never command strings, file content, MCP tool inputs, or a failure's `error`
+  text, so secrets cannot reach the log.
+- **Only real, verified token costs.** The Stop hook walks the transcript backward to
+  the turn's prompt (stepping over `tool_result` lines and `isMeta` lines injected while
+  a tool call is open), keeps top-level `type == "assistant"` lines, excludes
+  `model == "<synthetic>"`,
   **dedupes by `requestId`** (one JSONL line per content block; blocks of one request
   repeat identical `usage`), and sums `output_tokens`. If a number can't be computed,
   omit the `:cost` suffix entirely — never `:0` or a placeholder.
