@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 omnilog is a **Claude Code plugin**, written entirely in Windows PowerShell: an
-append-only action log. Hooks append one ASCII line to `omnilog.md` per tool call, per
-response (with real token cost), and per subagent finish. It was split out of the
+append-only action log. Hooks append one ASCII line to `.claude/.omnilog/.omnilog.md` per tool
+call, per response (with real token cost), and per subagent finish. It was split out of the
 retired `dev-strap` plugin (history preserved, the `ado` task board dropped).
 
 It is published through the **InterfaceLayer** marketplace (`jagp/interface-layer`),
@@ -14,8 +14,8 @@ which pins each plugin to a release tag + commit. This repo ships no `marketplac
 of its own. There is no build step; the plugin is the source tree.
 
 **Logging is done by hooks, not by you.** Never hand-write, edit, or backfill entries in
-`omnilog.md` — the entire design exists so the log does not depend on the model
-remembering (or inventing) anything. The file is git-ignored and exempt from all linters.
+the log — the entire design exists so the log does not depend on the model
+remembering (or inventing) anything. Its folder carries a seeded `.gitignore` (`*`) and it is exempt from all linters.
 
 ## Commands
 
@@ -63,7 +63,7 @@ tags honest when the schema evolves.
 - **Hooks always exit 0 and never throw.** A hook must be incapable of breaking a
   session: swallow failures, treat unreadable config as defaults, fail soft on schema
   drift.
-- **Append-only ledger.** `omnilog.md` lines are only ever appended — never rewritten,
+- **Append-only ledger.** Log lines are only ever appended — never rewritten,
   even to correct a known-bad entry.
 - **Descriptions, never raw material.** Shell/agent tools log `tool_input.description`,
   file tools the project-relative path only, Grep/Glob the pattern, WebFetch the URL's
@@ -84,7 +84,7 @@ tags honest when the schema evolves.
 Config lives in `.claude/omnilog.local.md` (git-ignored), keys honored only inside the
 YAML `---` frontmatter fence. Precedence, highest first: `$env:OMNILOG_ENABLED=off`
 (kill switch) → `$env:OMNILOG_FILE` (path override, used by tests) → `enabled: false` →
-`scope:` (`per-project` default — seeds `omnilog.md` on first write; `global`; `off`).
+`scope:` (`per-project` default — seeds `.claude/.omnilog/.omnilog.md` + its `*` `.gitignore` on first write; `global`; `off`).
 
 ### Test corpus
 

@@ -92,25 +92,40 @@ function Resolve-OmnilogTarget {
       return (Join-Path $base 'omnilog.md')
     }
     default {
-      # 'per-project' (and any unrecognized value): the calling project's own log.
-      # No marker gate -- the file is seeded on first write (see Write-OmnilogEntry).
+      # 'per-project' (and any unrecognized value): the calling project's own log, at
+      # <project>\.claude\.omnilog\.omnilog.md. No marker gate -- the file (and the
+      # self-ignoring .omnilog folder around it) is seeded on first write; see
+      # Initialize-OmnilogFile below.
       # Turn logging off with 'enabled: false', 'scope: off', or OMNILOG_ENABLED=off.
       if ($env:CLAUDE_PROJECT_DIR) {
         # A project dir that does not exist is a stray/stale value: log nothing rather than
         # let Initialize-OmnilogFile create that folder from scratch.
         if (-not (Test-Path -LiteralPath $env:CLAUDE_PROJECT_DIR -PathType Container)) { return $null }
-        return (Join-Path $env:CLAUDE_PROJECT_DIR 'omnilog.md')
+        $root = $env:CLAUDE_PROJECT_DIR
       }
-      # Fallback (no CLAUDE_PROJECT_DIR): the runtime working directory, never the
-      # plugin's own dir. Anchoring to $PWD keeps an installed plugin logging into
-      # the calling project rather than the plugin cache.
-      return (Join-Path (Get-Location).Path 'omnilog.md')
+      else {
+        # Fallback (no CLAUDE_PROJECT_DIR): the runtime working directory, never the
+        # plugin's own dir. Anchoring to $PWD keeps an installed plugin logging into
+        # the calling project rather than the plugin cache.
+        $root = (Get-Location).Path
+      }
+      return (Join-Path $root '.claude\.omnilog\.omnilog.md')
     }
   }
 }
 
 function Initialize-OmnilogFile([string]$target) {
   # Seed a fresh, empty log in the calling project if one does not exist yet.
+  #   1. log already there        -> nothing to do
+  #   2. parent folder missing    -> create it
+  #   3. create the empty log
+  #   4. parent folder is omnilog's own '.omnilog' -> drop a '.gitignore' holding '*'
+  #      beside the log, so git ignores the folder (log + that .gitignore itself) in
+  #      ANY project, with no edit to the project's own .gitignore.
+  # Step 4 is gated on the folder name on purpose: OMNILOG_FILE / a global 'path:'
+  # can point anywhere (even a repo root), and a '*' ignore there would hide the
+  # whole repo. Seeded only with a new log, so a user who deletes the .gitignore
+  # to commit their log keeps that choice.
   # Best-effort: a hook must never break a session, so failures are swallowed.
   if (-not $target) { return }
   try {
@@ -120,6 +135,12 @@ function Initialize-OmnilogFile([string]$target) {
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
       }
       New-Item -ItemType File -Force -Path $target | Out-Null
+      if ($dir -and (Split-Path -Leaf $dir) -eq '.omnilog') {
+        $ignore = Join-Path $dir '.gitignore'
+        if (-not (Test-Path -LiteralPath $ignore)) {
+          Set-Content -LiteralPath $ignore -Value '*' -Encoding ASCII
+        }
+      }
     }
   }
   catch { }

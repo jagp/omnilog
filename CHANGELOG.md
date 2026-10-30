@@ -5,6 +5,24 @@ the `dev-strap` plugin omnilog was split out of. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **The per-project log moved into `.claude/`.** It is now
+  `.claude/.omnilog/.omnilog.md` instead of `omnilog.md` in the repo root. On first
+  write omnilog also seeds `.claude/.omnilog/.gitignore` holding `*`, so the log stays
+  out of git in every project, with no edit to the project's own `.gitignore`. That
+  `.gitignore` is only seeded in a folder named `.omnilog`: an `OMNILOG_FILE` or
+  global `path:` log gets none, and an existing one is never overwritten. An old root
+  `omnilog.md` is left where it is; new lines go to the new path.
+
+### Fixed
+
+- `.claude/*.local.md` (e.g. `.claude/omnilog.local.md`) is now actually git-ignored in
+  this repo; `.gitignore` had the comment but no pattern.
+- `/omnilog-scope` no longer describes the marker-file gate that 1.0.0 removed.
+
 ## [1.0.1]
 
 ### Fixed

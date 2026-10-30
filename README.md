@@ -2,7 +2,7 @@
 
 **An append-only action log for Claude Code.** It answers one question continuously:
 **what is the agent actually doing that I can't see?** Every tool call, every response,
-every subagent finish — appended to `omnilog.md` as one factual line by hooks, with no
+every subagent finish — appended to `.claude/.omnilog/.omnilog.md` as one factual line by hooks, with no
 dependence on the model remembering to write it.
 
 Split out of the retired `dev-strap` plugin in 1.0.0; history is preserved.
@@ -54,15 +54,17 @@ The `Stop` token cost is computed by walking the session transcript backward to 
 ## Logging scope
 
 Logging is **on by default**: in any project you work in, omnilog seeds a fresh
-`omnilog.md` in the repo root on the first logged action and appends from there.
+`.claude/.omnilog/.omnilog.md` on the first logged action and appends from there. The
+`.omnilog/` folder carries its own `.gitignore` (`*`), so the log is never committed —
+no edit to your project's `.gitignore` needed.
 Configure per project with `/omnilog-scope`, or by hand in `.claude/omnilog.local.md`
 (git-ignored):
 
-| Scope                   | Behavior                                                          |
-| ----------------------- | ----------------------------------------------------------------- |
-| `per-project` (default) | writes `omnilog.md` in the repo root, creating it if absent       |
-| `global`                | writes one shared log at `path:` (default `~/.claude/omnilog.md`) |
-| `off`                   | omnilog disabled for this project                                 |
+| Scope                   | Behavior                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `per-project` (default) | writes `.claude/.omnilog/.omnilog.md`, creating it (self-ignoring) if absent |
+| `global`                | writes one shared log at `path:` (default `~/.claude/omnilog.md`)            |
+| `off`                   | omnilog disabled for this project                                            |
 
 ```yaml
 ---
