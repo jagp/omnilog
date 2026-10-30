@@ -1,6 +1,6 @@
 {
   "name": "omnilog",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Append-only action log for Claude Code: hooks write one ASCII line to omnilog.md per tool call, per response (with real token cost), and per subagent finish.",
   "author": {
     "name": "Jared Parmenter",

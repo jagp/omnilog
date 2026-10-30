@@ -1,2 +1,5 @@
 # Prettier friendly markdownlint config (all formatting rules disabled)
 extends: markdownlint/style/prettier
+# Keep a Changelog repeats "### Fixed" / "### Added" under every version heading.
+MD024:
+  siblings_only: true
