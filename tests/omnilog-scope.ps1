@@ -105,5 +105,32 @@ Remove-Item Env:\OMNILOG_FILE
 Remove-Item Env:\CLAUDE_PROJECT_DIR -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $proj2 -Recurse -Force -ErrorAction SilentlyContinue
 
+# --- legacy root log (pre-.claude layout) -------------------------------------
+$proj3 = Join-Path $env:TEMP ("omni-legacy-{0}" -f ([guid]::NewGuid().ToString('N')))
+New-Item -ItemType Directory -Path $proj3 -Force | Out-Null
+$env:CLAUDE_PROJECT_DIR = $proj3
+$legacy3 = Join-Path $proj3 'omnilog.md'
+$current3 = Join-Path $proj3 '.claude\.omnilog\.omnilog.md'
+
+# 14) a legacy root omnilog.md keeps receiving lines; no .claude log is created
+Set-Content -LiteralPath $legacy3 -Value '[26-01-01 00:00] old line <Bash>' -Encoding ASCII
+Check 'legacy root log => used' ((Resolve-OmnilogTarget) -eq $legacy3)
+Write-OmnilogEntry 'legacy append' 'test'
+Check 'legacy root log: line lands' ((Get-Content -Raw -LiteralPath $legacy3) -match 'legacy append')
+Check 'legacy root log: no .omnilog folder' (-not (Test-Path -LiteralPath (Split-Path $current3 -Parent)))
+
+# 15) once the .claude log exists it wins, even with a legacy root log present
+New-Item -ItemType Directory -Path (Split-Path $current3 -Parent) -Force | Out-Null
+Set-Content -LiteralPath $current3 -Value '' -Encoding ASCII
+Check 'both present => .claude log' ((Resolve-OmnilogTarget) -eq $current3)
+
+# 16) a DIRECTORY named omnilog.md is not a legacy log
+Remove-Item -LiteralPath $legacy3, (Join-Path $proj3 '.claude') -Recurse -Force
+New-Item -ItemType Directory -Path $legacy3 -Force | Out-Null
+Check 'omnilog.md dir => .claude log' ((Resolve-OmnilogTarget) -eq $current3)
+
+Remove-Item Env:\CLAUDE_PROJECT_DIR -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $proj3 -Recurse -Force -ErrorAction SilentlyContinue
+
 if ($fail -eq 0) { Write-Output 'PASS  omnilog-scope'; exit 0 }
 Write-Output ("FAIL  omnilog-scope ({0} case(s))" -f $fail); exit 1

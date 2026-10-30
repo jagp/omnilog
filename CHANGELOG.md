@@ -14,8 +14,9 @@ the `dev-strap` plugin omnilog was split out of. Format follows
   write omnilog also seeds `.claude/.omnilog/.gitignore` holding `*`, so the log stays
   out of git in every project, with no edit to the project's own `.gitignore`. That
   `.gitignore` is only seeded in a folder named `.omnilog`: an `OMNILOG_FILE` or
-  global `path:` log gets none, and an existing one is never overwritten. An old root
-  `omnilog.md` is left where it is; new lines go to the new path.
+  global `path:` log gets none, and an existing one is never overwritten. A project that
+  already has a root `omnilog.md` keeps appending to it (no new file is created); that
+  legacy file is not auto-ignored.
 
 ### Fixed
 

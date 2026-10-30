@@ -261,7 +261,8 @@ override) → `enabled: false` in `.claude/omnilog.local.md` → `scope:` from t
 (only keys inside the YAML `---` fence count):
 
 - `per-project` (default): `$CLAUDE_PROJECT_DIR/.claude/.omnilog/.omnilog.md`, or the
-  same path under `$PWD` when the variable is unset. A project dir that doesn't exist
+  same path under `$PWD` when the variable is unset. If that file does not exist but a
+  legacy root `omnilog.md` does, the legacy file keeps receiving lines. A project dir that doesn't exist
   means no log.
 - `global`: the config's `path:`, else `$CLAUDE_CONFIG_DIR` or `~/.claude`, plus `/omnilog.md`.
 - `off`: no log.

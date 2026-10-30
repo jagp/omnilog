@@ -84,7 +84,7 @@ tags honest when the schema evolves.
 Config lives in `.claude/omnilog.local.md` (git-ignored), keys honored only inside the
 YAML `---` frontmatter fence. Precedence, highest first: `$env:OMNILOG_ENABLED=off`
 (kill switch) → `$env:OMNILOG_FILE` (path override, used by tests) → `enabled: false` →
-`scope:` (`per-project` default — seeds `.claude/.omnilog/.omnilog.md` + its `*` `.gitignore` on first write; `global`; `off`).
+`scope:` (`per-project` default — seeds `.claude/.omnilog/.omnilog.md` + its `*` `.gitignore` on first write, unless only a legacy root `omnilog.md` exists, which keeps being used; `global`; `off`).
 
 ### Test corpus
 

@@ -92,10 +92,12 @@ function Resolve-OmnilogTarget {
       return (Join-Path $base 'omnilog.md')
     }
     default {
-      # 'per-project' (and any unrecognized value): the calling project's own log, at
-      # <project>\.claude\.omnilog\.omnilog.md. No marker gate -- the file (and the
-      # self-ignoring .omnilog folder around it) is seeded on first write; see
-      # Initialize-OmnilogFile below.
+      # 'per-project' (and any unrecognized value): the calling project's own log.
+      #   1. <project>\.claude\.omnilog\.omnilog.md exists -> use it
+      #   2. else a legacy <project>\omnilog.md exists      -> keep appending there,
+      #      so upgrading never splits one project's history across two files
+      #   3. else the .claude path from step 1, seeded (with the self-ignoring
+      #      .omnilog folder around it) on first write; see Initialize-OmnilogFile.
       # Turn logging off with 'enabled: false', 'scope: off', or OMNILOG_ENABLED=off.
       if ($env:CLAUDE_PROJECT_DIR) {
         # A project dir that does not exist is a stray/stale value: log nothing rather than
@@ -109,7 +111,10 @@ function Resolve-OmnilogTarget {
         # the calling project rather than the plugin cache.
         $root = (Get-Location).Path
       }
-      return (Join-Path $root '.claude\.omnilog\.omnilog.md')
+      $current = Join-Path $root '.claude\.omnilog\.omnilog.md'
+      $legacy = Join-Path $root 'omnilog.md'
+      if (-not (Test-Path -LiteralPath $current) -and (Test-Path -LiteralPath $legacy -PathType Leaf)) { return $legacy }
+      return $current
     }
   }
 }

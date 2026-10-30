@@ -56,7 +56,9 @@ The `Stop` token cost is computed by walking the session transcript backward to 
 Logging is **on by default**: in any project you work in, omnilog seeds a fresh
 `.claude/.omnilog/.omnilog.md` on the first logged action and appends from there. The
 `.omnilog/` folder carries its own `.gitignore` (`*`), so the log is never committed —
-no edit to your project's `.gitignore` needed.
+no edit to your project's `.gitignore` needed. A project that already has a root
+`omnilog.md` from an older version keeps appending to it instead (that file is not
+auto-ignored).
 Configure per project with `/omnilog-scope`, or by hand in `.claude/omnilog.local.md`
 (git-ignored):
 
