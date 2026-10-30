@@ -4,6 +4,7 @@ omnilog.md.historic
 # maintainer's private working notes (planning lives in dotfiles, not the repo)
 todo.md
 # per-project local plugin settings (e.g. .claude/omnilog.local.md) are never committed
+.claude/*.local.md
 
 
 

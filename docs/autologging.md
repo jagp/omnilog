@@ -260,12 +260,16 @@ The log path resolves in `omnilog-lib.ps1#Resolve-OmnilogTarget`, highest priori
 override) → `enabled: false` in `.claude/omnilog.local.md` → `scope:` from the same file
 (only keys inside the YAML `---` fence count):
 
-- `per-project` (default): `$CLAUDE_PROJECT_DIR/omnilog.md`, or `$PWD/omnilog.md` when
-  the variable is unset. A project dir that doesn't exist means no log.
+- `per-project` (default): `$CLAUDE_PROJECT_DIR/.claude/.omnilog/.omnilog.md`, or the
+  same path under `$PWD` when the variable is unset. If that file does not exist but a
+  legacy root `omnilog.md` does, the legacy file keeps receiving lines. A project dir that doesn't exist
+  means no log.
 - `global`: the config's `path:`, else `$CLAUDE_CONFIG_DIR` or `~/.claude`, plus `/omnilog.md`.
 - `off`: no log.
 
-The file is created on first write.
+The file is created on first write (`Initialize-OmnilogFile`). When its folder is named
+`.omnilog`, a `.gitignore` holding `*` is seeded beside it, so the log stays out of git in
+any project; a log anywhere else (`OMNILOG_FILE`, `path:`) gets no `.gitignore`.
 
 Verified offline against `evals/fixtures/` before activation: real turn -> summed cost;
 empty-turn and synthetic-only turns -> no cost field; agent spawn -> id reference captured.
@@ -274,7 +278,7 @@ empty-turn and synthetic-only turns -> no cost field; agent spawn -> id referenc
 tools log `tool_input.description` (e.g. `Rotate GitHub auth token <Bash>`) — never the
 command string; file tools log only the file's path, never content; `WebFetch` logs only
 the host; MCP tools and failure `error` text are never logged. So secret _values_ never
-reach the log. `omnilog.md` is still git-ignored (`.gitignore`): it records what was
+reach the log. The per-project log is still git-ignored (its folder's seeded `.gitignore`): it records what was
 worked on, which is private even when it holds no secrets.
 
 ### Shared lib & tests

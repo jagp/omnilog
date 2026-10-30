@@ -17,7 +17,8 @@ $proj = Join-Path $env:TEMP ("omni-env-{0}" -f ([guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path (Join-Path $proj '.claude') -Force | Out-Null
 $env:CLAUDE_PROJECT_DIR = $proj
 $cfg = Join-Path $proj '.claude\omnilog.local.md'
-$log = Join-Path $proj 'omnilog.md'
+$log = Join-Path $proj '.claude\.omnilog\.omnilog.md'
+New-Item -ItemType Directory -Path (Split-Path $log -Parent) -Force | Out-Null
 Set-Content -LiteralPath $log -Value '' -Encoding ASCII   # pre-existing log in the project
 
 # 1) whitespace-only OMNILOG_FILE (leaked by a wrapper) -> treated as unset, falls
@@ -28,7 +29,7 @@ Remove-Item Env:\OMNILOG_FILE
 
 # 4) CLAUDE_PROJECT_DIR with a trailing backslash still finds marker + config
 $env:CLAUDE_PROJECT_DIR = $proj + '\'
-Check 'trailing backslash project dir' ((Resolve-OmnilogTarget) -eq (Join-Path ($proj + '\') 'omnilog.md'))
+Check 'trailing backslash project dir' ((Resolve-OmnilogTarget) -eq (Join-Path ($proj + '\') '.claude\.omnilog\.omnilog.md'))
 $env:CLAUDE_PROJECT_DIR = $proj
 
 # 5) CLAUDE_PROJECT_DIR pointing at a directory that does not exist -> null, no throw
