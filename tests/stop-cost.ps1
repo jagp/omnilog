@@ -45,6 +45,45 @@ $rc = FireStop $tp
 Check 'no usage: exit 0'       ($rc -eq 0)
 Check 'no usage: bare <Stop>'  ((LastLine) -match '<Stop>$')
 
+# 2b) usage present but output_tokens missing (schema drift) -> bare <Stop>, never <Stop:0>
+@(
+  '{"type":"user","message":{"content":"prompt"}}'
+  '{"type":"assistant","requestId":"r9","message":{"model":"m","usage":{"input_tokens":5},"content":[]}}'
+) | Set-Content -LiteralPath $tp -Encoding UTF8
+$rc = FireStop $tp
+Check 'no output_tokens: exit 0'       ($rc -eq 0)
+Check 'no output_tokens: bare <Stop>'  ((LastLine) -match '<Stop>$')
+
+# 2c) isMeta user lines injected MID-turn (skill body after a Skill call, with or without
+#     sourceToolUseID) must not end the walk: expect 10 + 20 + 40 = 70, 2 tool calls. An
+#     isMeta line that opens a turn (peer message after a finished reply) still ends it.
+@(
+  '{"type":"user","message":{"content":"earlier prompt"}}'
+  '{"type":"assistant","requestId":"r0","message":{"model":"m","usage":{"output_tokens":1000},"content":[{"type":"text","text":"done"}]}}'
+  '{"type":"user","isMeta":true,"message":{"content":"peer message opens this turn"}}'
+  '{"type":"assistant","requestId":"r1","message":{"model":"m","usage":{"output_tokens":10},"content":[{"type":"tool_use","id":"t1"}]}}'
+  '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1"}]}}'
+  '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"content":"skill body"}}'
+  '{"type":"assistant","requestId":"r2","message":{"model":"m","usage":{"output_tokens":20},"content":[{"type":"tool_use","id":"t2"}]}}'
+  '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t2"}]}}'
+  '{"type":"system","subtype":"noise"}'
+  '{"type":"user","isMeta":true,"message":{"content":[{"type":"text","text":"reminder"}]}}'
+  '{"type":"assistant","requestId":"r3","message":{"model":"m","usage":{"output_tokens":40},"content":[{"type":"text","text":"wrap"}]}}'
+) | Set-Content -LiteralPath $tp -Encoding UTF8
+$rc = FireStop $tp
+Check 'mid-turn meta: exit 0'          ($rc -eq 0)
+Check 'mid-turn meta: full turn cost'  ((LastLine) -match '<Stop:70>$')
+Check 'mid-turn meta: tool calls'      ((LastLine) -match 'response - 2 tool call\(s\)')
+
+# 2d) StopFailure (turn ended on an API error) logs under its own tag, cost still real
+@(
+  '{"type":"user","message":{"content":"prompt"}}'
+  '{"type":"assistant","requestId":"r1","message":{"model":"m","usage":{"output_tokens":7},"content":[]}}'
+) | Set-Content -LiteralPath $tp -Encoding UTF8
+$rc = Fire 'omnilog-stop.ps1' ('{"hook_event_name":"StopFailure","error":"rate_limit","transcript_path":"' + $tp.Replace('\', '\\') + '"}')
+Check 'stop failure: exit 0'      ($rc -eq 0)
+Check 'stop failure: own tag'     ((LastLine) -match 'response failed - 0 tool call\(s\) <StopFailure:7>$')
+
 # 3) Glob logs its pattern (Grep is covered in hooks-ascii-output.ps1)
 $rc = Fire 'omnilog-tool.ps1' '{"tool_name":"Glob","tool_input":{"pattern":"**/*.ps1"}}'
 Check 'glob: exit 0'       ($rc -eq 0)
