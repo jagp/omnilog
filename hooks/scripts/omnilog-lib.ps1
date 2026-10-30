@@ -6,7 +6,7 @@
 #                   so the log renders identically in every terminal / editor / git diff.
 #   * one line    - whitespace (incl. newlines) collapses to single spaces; entries are
 #                   never truncated, the full detail is kept however long.
-# Verified by tests/omnilog-ascii.test.ps1.
+# Verified by tests/ascii-sanitizer.ps1 and tests/hooks-ascii-output.ps1.
 
 function Read-HookStdin {
   # Read the hook payload as UTF-8 regardless of the console code page.
@@ -76,7 +76,6 @@ function Resolve-OmnilogTarget {
   # Order: OMNILOG_ENABLED=off (master kill switch, beats everything) > OMNILOG_FILE
   # > config 'enabled: false' > scope.
   if ((ConvertTo-OmnilogBool $env:OMNILOG_ENABLED) -eq $false) { return $null }
-  if ($env:OMNILOG_FILE) { return $env:OMNILOG_FILE }   # explicit path override (tests + power users)
   # Highest-priority override (tests + power users). Trimmed: a whitespace-only
   # value leaked by a wrapper/other tool must not become a "path" of spaces.
   $ov = [string]$env:OMNILOG_FILE
@@ -97,6 +96,9 @@ function Resolve-OmnilogTarget {
       # No marker gate -- the file is seeded on first write (see Write-OmnilogEntry).
       # Turn logging off with 'enabled: false', 'scope: off', or OMNILOG_ENABLED=off.
       if ($env:CLAUDE_PROJECT_DIR) {
+        # A project dir that does not exist is a stray/stale value: log nothing rather than
+        # let Initialize-OmnilogFile create that folder from scratch.
+        if (-not (Test-Path -LiteralPath $env:CLAUDE_PROJECT_DIR -PathType Container)) { return $null }
         return (Join-Path $env:CLAUDE_PROJECT_DIR 'omnilog.md')
       }
       # Fallback (no CLAUDE_PROJECT_DIR): the runtime working directory, never the
@@ -125,7 +127,7 @@ function Initialize-OmnilogFile([string]$target) {
 
 function Write-OmnilogEntry([string]$detail, [string]$tag) {
   $target = Resolve-OmnilogTarget
-  if (-not $target) { return }   # scope=off, or per-project with no opt-in marker
+  if (-not $target) { return }   # logging is off (kill switch, enabled: false, scope: off)
   Initialize-OmnilogFile $target
 
 

@@ -57,6 +57,25 @@ Check 'injection: exit 0'          ($rc -eq 0)
 Check 'injection: exactly 1 line'  ($after.Count -eq ($before + 1))
 Check 'injection: formatted'       ($after[-1] -match $fmt)
 
+# 6b) raw material never reaches the log: an MCP tool's `description` is user data (a task
+#     body, an email) not a model summary, and a WebFetch URL can carry a token in its query
+$rc = Fire 'omnilog-tool.ps1' '{"tool_name":"mcp__todo__add","tool_input":{"description":"SECRET_mcp_body"}}'
+Check 'mcp description: exit 0'      ($rc -eq 0)
+Check 'mcp description: bare tag'    ((LastLine) -match '\] <mcp__todo__add>$')
+$rc = Fire 'omnilog-tool.ps1' '{"tool_name":"WebFetch","tool_input":{"url":"https://user:pw@example.com:8443/a/b?token=SECRET_qs#frag"}}'
+Check 'webfetch: exit 0'             ($rc -eq 0)
+Check 'webfetch: host only'          ((LastLine) -match '\] example\.com <WebFetch>$')
+$rc = Fire 'omnilog-tool.ps1' '{"tool_name":"WebFetch","tool_input":{"url":"not a url SECRET_bad"}}'
+Check 'webfetch bad url: bare tag'   ((LastLine) -match '\] <WebFetch>$')
+
+# 6c) PostToolUseFailure: same detail rules, marked failed, the `error` text never logged
+$rc = Fire 'omnilog-tool.ps1' '{"hook_event_name":"PostToolUseFailure","tool_name":"Bash","tool_input":{"description":"Run the suite","command":"x"},"error":"SECRET_err"}'
+Check 'tool failure: exit 0'         ($rc -eq 0)
+Check 'tool failure: marked'         ((LastLine) -match '\] failed: Run the suite <Bash>$')
+$rc = Fire 'omnilog-tool.ps1' '{"hook_event_name":"PostToolUseFailure","tool_name":"mcp__x__y","tool_input":{},"error":"SECRET_err"}'
+Check 'tool failure no detail'       ((LastLine) -match '\] failed <mcp__x__y>$')
+Check 'no secret anywhere'           (-not ((Get-Content -LiteralPath $log -Raw) -match 'SECRET'))
+
 # 7) every line written so far is well-formed and ASCII
 $lines = Get-Content -LiteralPath $log
 Check 'all lines formatted' (@($lines | Where-Object { $_ -notmatch $fmt }).Count -eq 0)

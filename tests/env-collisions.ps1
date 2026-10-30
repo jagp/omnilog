@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Path (Join-Path $proj '.claude') -Force | Out-Null
 $env:CLAUDE_PROJECT_DIR = $proj
 $cfg = Join-Path $proj '.claude\omnilog.local.md'
 $log = Join-Path $proj 'omnilog.md'
-Set-Content -LiteralPath $log -Value '' -Encoding ASCII   # opt-in marker for the whole file
+Set-Content -LiteralPath $log -Value '' -Encoding ASCII   # pre-existing log in the project
 
 # 1) whitespace-only OMNILOG_FILE (leaked by a wrapper) -> treated as unset, falls
 #    through to normal resolution instead of "logging" to a path of spaces

@@ -5,6 +5,32 @@ the `dev-strap` plugin omnilog was split out of. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1]
+
+### Fixed
+
+- **Stop token cost no longer undercounts.** Current Claude Code versions write `isMeta`
+  user lines in the middle of a turn (skill bodies, reminders). The transcript walk took
+  them for the turn's prompt and stopped early. Across 614 real turns, 46 were
+  undercounted, some by more than 90%. The walk now steps over an `isMeta` line while a
+  tool call is still open.
+- **Never `:0`.** A usage block with no `output_tokens` now leaves the cost off instead
+  of logging `<Stop:0>`.
+- **No raw material from MCP tools or WebFetch.** MCP and other unlisted tools now log
+  a bare `<ToolName>` (their `description` input is user data, not a model summary).
+  `WebFetch` logs only the URL's host, never its path, query or credentials.
+- **Config edge cases.** A whitespace-only `OMNILOG_FILE` is ignored as documented, and
+  a `CLAUDE_PROJECT_DIR` that does not exist turns logging off instead of creating that
+  folder.
+
+### Added
+
+- **Failed tool calls and failed responses are logged.** `PostToolUse` no longer fires
+  when a tool fails, so `PostToolUseFailure` is registered too: those lines read
+  `failed: <detail> <ToolName>`. A turn ended by an API error fires `StopFailure`, which
+  logs `response failed - N tool call(s) <StopFailure[:cost]>`. The `error` text is never
+  logged.
+
 ## [1.0.0]
 
 ### Changed
@@ -60,6 +86,7 @@ the `dev-strap` plugin omnilog was split out of. Format follows
 ### Marketplace note
 
 `.claude-plugin/marketplace.json` pins `version` per plugin entry; bumped to 0.3.0.
+
 ## [0.2.1]
 
 ### Added

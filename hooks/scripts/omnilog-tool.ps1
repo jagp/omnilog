@@ -1,7 +1,8 @@
-# PostToolUse hook: append one line per tool call. Logs the model-authored description
-# (shell/agent) or project-relative path/pattern (file/search) - never raw commands or file
-# content, so secrets never reach the log. ASCII-only + one-line output are enforced centrally
-# in omnilog-lib.ps1. <actionType> = literal tool name. No :cost (only Stop has a real one).
+# PostToolUse / PostToolUseFailure hook: append one line per tool call. Logs the model-authored
+# description (shell/agent), project-relative path/pattern (file/search), or a URL's host -
+# never raw commands, file content, or MCP tool inputs, so secrets never reach the log.
+# ASCII-only + one-line output are enforced centrally in omnilog-lib.ps1. <actionType> =
+# literal tool name. No :cost (only Stop has a real one).
 $ErrorActionPreference = 'Stop'
 
 function ConvertTo-ProjectRelative([string]$path) {
@@ -18,6 +19,14 @@ function ConvertTo-ProjectRelative([string]$path) {
     return $path.Substring($prefix.Length)   # the '/'->'\' fold keeps length, so the index holds
   }
   return $path
+}
+
+function Get-UrlHost([string]$url) {
+  # A WebFetch URL can carry credentials or a token (userinfo, query, fragment), so log only
+  # the host. Anything that is not an absolute URL logs nothing rather than the raw string.
+  $parsed = $null
+  if ([Uri]::TryCreate($url, [UriKind]::Absolute, [ref]$parsed) -and $parsed.Host) { return $parsed.Host }
+  return ''
 }
 
 try {
@@ -49,10 +58,16 @@ try {
       '^(Grep|Glob)$'                              { $detail = [string]$ti.pattern }
       '^Skill$'                                    { $detail = [string]$ti.skill }
       '^ToolSearch$'                               { $detail = [string]$ti.query }
-      '^WebFetch$'                                 { $detail = [string]$ti.url }
+      '^WebFetch$'                                 { $detail = Get-UrlHost ([string]$ti.url) }
       '^WebSearch$'                                { $detail = [string]$ti.query }
-      default                                      { $detail = [string]$ti.description }
+      default                                      { $detail = '' }   # MCP/other: inputs are user data
     }
+  }
+
+  # PostToolUseFailure: same detail, marked failed. Its `error` text can echo the command or
+  # file content, so it is never logged.
+  if (([string]$o.hook_event_name) -eq 'PostToolUseFailure') {
+    $detail = if ($detail) { "failed: $detail" } else { 'failed' }
   }
 
   Write-OmnilogEntry $detail $tool
