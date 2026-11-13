@@ -47,7 +47,11 @@ try {
 $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
 if ($pwsh) {
   $probe = '. ''' + (Join-Path $hooks 'omnilog-lib.ps1') + '''; ConvertTo-Ascii ("caf" + [char]0xE9 + [char]0x2014 + "x")'
-  $out = & pwsh -NoProfile -Command $probe
+  # -EncodedCommand, not -Command: Windows PowerShell 5.1 strips the embedded
+  # double quotes when it passes a -Command string to another program, so pwsh
+  # received (caf + ...) and failed. Base64 of UTF-16LE arrives intact.
+  $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($probe))
+  $out = & pwsh -NoProfile -EncodedCommand $encoded
   Check 'pwsh: ConvertTo-Ascii parity' ($out -eq 'caf?-x')
 } else {
   Write-Output '  skip pwsh parity (pwsh not installed)'
