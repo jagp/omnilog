@@ -1,0 +1,20 @@
+# Runs omnilog's test suite (tests/run-all.ps1) on every push and pull request.
+# omnilog targets Windows PowerShell 5.1, so it runs on a Windows runner.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Git identity (some tests commit into throwaway repos)
+        run: |
+          git config --global user.name "omnilog tests"
+          git config --global user.email "tests@omnilog.invalid"
+      - name: Test suite
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/run-all.ps1
